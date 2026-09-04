@@ -4,11 +4,9 @@ import { createUnprovenCallTx, submitTxAsync } from '@midnight-ntwrk/midnight-js
 import { Contract } from '../managed/contract/index.js';
 import { useWallet } from '../contexts/WalletContext';
 import { getContractAddress } from '../config';
-import { createPatchedPublicDataProvider, fromHex, toHex } from '../lib/midnight';
+import { fromHex, toHex } from '../lib/midnight';
 import { Shield, ShieldAlert, Lock, ArrowRight, CheckCircle2, Clock, Activity, Fingerprint } from 'lucide-react';
-
-const INDEXER_URL = 'http://127.0.0.1:8088/api/v4/graphql';
-const INDEXER_WS = 'ws://127.0.0.1:8088/api/v4/graphql/ws';
+import { useContractState } from '../hooks/useContractState';
 
 function getCompiledContract() {
   return CompiledContract.make('SilentSolventContract', Contract).pipe(
@@ -30,24 +28,10 @@ export default function VerifyPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // On-chain state
-  const [ledgerState, setLedgerState] = useState<any>(null);
-  const [isLoadingLedger, setIsLoadingLedger] = useState(true);
+  const { ledgerState, isLoading: isLoadingLedger } = useContractState(3000);
 
-  // Fetch ledger state on mount
+  // Auto-generate a dummy secret on mount if none exists
   useEffect(() => {
-    const fetchState = async () => {
-      try {
-        const provider = createPatchedPublicDataProvider(INDEXER_URL, INDEXER_WS);
-        const state = await provider.queryContractState(getContractAddress());
-        if (state) setLedgerState(state.data);
-      } catch (e) {
-        console.error('Failed to fetch ledger:', e);
-      } finally {
-        setIsLoadingLedger(false);
-      }
-    };
-    fetchState();
-    
     // Auto-generate a dummy secret if none exists
     setFirmSecret(Array.from(crypto.getRandomValues(new Uint8Array(32)))
       .map(b => b.toString(16).padStart(2, '0')).join(''));
@@ -56,6 +40,7 @@ export default function VerifyPage() {
   const handleProve = useCallback(async () => {
     const balance = BigInt(balanceStr.replace(/[^0-9]/g, ''));
     if (!ledgerState) return setErrorMsg('Failed to load session parameters.');
+    if (!ledgerState.is_active) return setErrorMsg('This trade session has been paused by the administrator.');
 
     setProvingStep(2);
     setProvingProgress(10);

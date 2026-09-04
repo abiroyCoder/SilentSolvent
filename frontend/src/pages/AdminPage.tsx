@@ -4,11 +4,9 @@ import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contra
 import { Contract, pureCircuits } from '../managed/contract/index.js';
 import { useWallet } from '../contexts/WalletContext';
 import { getContractAddress, setContractAddress } from '../config';
-import { createPatchedPublicDataProvider, fromHex, toHex } from '../lib/midnight';
+import { fromHex } from '../lib/midnight';
 import { Settings, Shield, PlusCircle, PauseCircle, PlayCircle, RefreshCw } from 'lucide-react';
-
-const INDEXER_URL = 'http://127.0.0.1:8088/api/v4/graphql';
-const INDEXER_WS = 'ws://127.0.0.1:8088/api/v4/graphql/ws';
+import { useContractState } from '../hooks/useContractState';
 
 function getCompiledContract() {
   return CompiledContract.make('SilentSolventContract', Contract).pipe(
@@ -28,30 +26,15 @@ export default function AdminPage() {
   const [isDeploying, setIsDeploying] = useState(false);
 
   // Live State
-  const [ledgerState, setLedgerState] = useState<any>(null);
-  const [isLoadingLedger, setIsLoadingLedger] = useState(false);
   const [activeContract, setActiveContract] = useState(getContractAddress());
+  const { ledgerState, isLoading: isLoadingLedger, refetch } = useContractState(3000, activeContract);
 
   const generateRandomHex = () => Array.from(crypto.getRandomValues(new Uint8Array(32)))
     .map(b => b.toString(16).padStart(2, '0')).join('');
 
   useEffect(() => {
     setAdminSk(generateRandomHex());
-    fetchState();
   }, []);
-
-  const fetchState = async () => {
-    setIsLoadingLedger(true);
-    try {
-      const provider = createPatchedPublicDataProvider(INDEXER_URL, INDEXER_WS);
-      const state = await provider.queryContractState(activeContract);
-      if (state) setLedgerState(state.data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoadingLedger(false);
-    }
-  };
 
   const handleDeploy = async () => {
     if (!session) return setDeployStatus('Connect wallet first.');
@@ -99,7 +82,7 @@ export default function AdminPage() {
         args: []
       });
       setDeployStatus(`Session ${isCurrentlyActive ? 'paused' : 'resumed'}.`);
-      setTimeout(fetchState, 3000);
+      setTimeout(refetch, 3000);
     } catch (e: any) {
       setDeployStatus(`Failed: ${e.message}`);
     }
@@ -162,7 +145,7 @@ export default function AdminPage() {
           <div className="card-header border-b border-[var(--border)] pb-16">
             <div className="card-title flex items-center gap-8 justify-between w-full">
               <span className="flex items-center gap-8"><Shield size={14}/> Manage Active Session</span>
-              <button className="btn btn-ghost btn-sm p-0" onClick={fetchState}><RefreshCw size={14}/></button>
+              <button className="btn btn-ghost btn-sm p-0" onClick={() => refetch()}><RefreshCw size={14}/></button>
             </div>
           </div>
 

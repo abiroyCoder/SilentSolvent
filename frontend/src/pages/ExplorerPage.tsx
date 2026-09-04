@@ -1,40 +1,11 @@
-import { useState, useEffect } from 'react';
 import { getContractAddress } from '../config';
-import { createPatchedPublicDataProvider, toHex } from '../lib/midnight';
+import { toHex } from '../lib/midnight';
 import { Search, Clock, ShieldCheck, Activity } from 'lucide-react';
-
-const INDEXER_URL = 'http://127.0.0.1:8088/api/v4/graphql';
-const INDEXER_WS = 'ws://127.0.0.1:8088/api/v4/graphql/ws';
+import { useContractState } from '../hooks/useContractState';
 
 export default function ExplorerPage() {
-  const [ledgerState, setLedgerState] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const { ledgerState, isLoading, lastUpdate } = useContractState();
 
-  const fetchState = async () => {
-    try {
-      const provider = createPatchedPublicDataProvider(INDEXER_URL, INDEXER_WS);
-      const state = await provider.queryContractState(getContractAddress());
-      if (state) {
-        setLedgerState(state.data);
-        setLastUpdate(new Date());
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchState();
-    const id = setInterval(fetchState, 5000);
-    return () => clearInterval(id);
-  }, []);
-
-  // In a real app we would iterate the Map from ledgerState.attestation_log
-  // but since we are just pulling the root state via indexer without wallet iterator helpers,
-  // we'll display the count and simulate the event log based on total_attestations
   const renderAttestationFeed = () => {
     if (!ledgerState) return null;
     const count = Number(ledgerState.total_attestations || 0);
@@ -58,6 +29,10 @@ export default function ExplorerPage() {
     ));
   };
 
+  const maxAttestations = Number(ledgerState?.max_attestations || 0);
+  const totalAttestations = Number(ledgerState?.total_attestations || 0);
+  const progressPercent = maxAttestations > 0 ? (totalAttestations / maxAttestations) * 100 : 0;
+
   return (
     <div className="page page-wide">
       <div className="flex items-center justify-between mb-24">
@@ -69,7 +44,7 @@ export default function ExplorerPage() {
         <div className="flex-col gap-16">
           <div className="card">
             <div className="card-header border-b border-[var(--border)] pb-16 mb-0">
-              <div className="card-title">Contract Overview</div>
+              <div className="card-title">Analytics Dashboard</div>
             </div>
             {isLoading && !ledgerState ? (
               <div className="p-24 text-center text-muted"><div className="spinner mx-auto mb-8"/> Reading chain...</div>
@@ -86,16 +61,26 @@ export default function ExplorerPage() {
                   {ledgerState.is_active ? <span className="status status-active">Active</span> : <span className="status status-paused">Paused</span>}
                 </div>
                 <div className="data-row">
-                  <span className="data-label">Threshold</span>
-                  <span className="data-value">${(Number(ledgerState.min_solvency_threshold)/100).toLocaleString()}</span>
+                  <span className="data-label">Min Solvency Threshold</span>
+                  <span className="data-value font-bold">${(Number(ledgerState.min_solvency_threshold)/100).toLocaleString()}</span>
                 </div>
                 <div className="data-row">
                   <span className="data-label">Broker ID Hash</span>
                   <span className="data-value hash hash-short">{toHex(ledgerState.broker_id)}</span>
                 </div>
-                <div className="data-row">
-                  <span className="data-label">Attestations</span>
-                  <span className="data-value">{ledgerState.total_attestations?.toString()}</span>
+                
+                {/* Visual Progress Bar */}
+                <div className="mt-24">
+                  <div className="flex justify-between text-[12px] font-semibold mb-8">
+                    <span>Participation Fill</span>
+                    <span>{totalAttestations} / {maxAttestations}</span>
+                  </div>
+                  <div className="w-full bg-[var(--bg-0)] rounded-full h-8 overflow-hidden border border-[var(--border)]">
+                    <div 
+                      className="bg-[var(--accent)] h-full transition-all duration-500 ease-in-out"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -106,7 +91,7 @@ export default function ExplorerPage() {
           <div className="card-header border-b border-[var(--border)] p-20 mb-0 bg-[var(--bg-0)]">
             <div className="card-title">Live Attestation Feed</div>
           </div>
-          <div className="flex-col">
+          <div className="flex-col max-h-[500px] overflow-y-auto">
             {isLoading && !ledgerState ? (
               <div className="p-24 text-center text-muted"><div className="spinner mx-auto mb-8"/></div>
             ) : (
@@ -118,3 +103,4 @@ export default function ExplorerPage() {
     </div>
   );
 }
+
