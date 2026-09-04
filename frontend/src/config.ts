@@ -12,3 +12,4 @@ export const getContractAddress = (): string => {
 export const setContractAddress = (address: string) => {
   localStorage.setItem('silentsolvent_contract_address', address);
 };
+// Dev checkpoint: 2026-09-04T17:03:25+05:30
