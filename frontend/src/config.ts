@@ -1,0 +1,14 @@
+// Address of the deployed SilentSolvent contract
+// You can override this in localStorage for testing without rebuilding
+export const getContractAddress = (): string => {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem('silentsolvent_contract_address');
+    if (cached) return cached;
+  }
+  // Default Preprod address (update after deployment)
+  return import.meta.env.VITE_CONTRACT_ADDRESS || '020000000000000000000000000000000000000000000000000000000000000000';
+};
+
+export const setContractAddress = (address: string) => {
+  localStorage.setItem('silentsolvent_contract_address', address);
+};

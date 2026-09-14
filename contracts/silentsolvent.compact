@@ -1,0 +1,119 @@
+pragma language_version >=0.22.0;
+
+import CompactStandardLibrary;
+
+// ═══════════════════════════════════════════════════
+// PUBLIC LEDGER STATE — visible to all chain observers
+// ═══════════════════════════════════════════════════
+
+export ledger min_solvency_threshold: Uint<64>;
+export ledger trade_session_id: Bytes<32>;
+export ledger session_deadline: Uint<64>;
+export ledger broker_id: Bytes<32>;
+export ledger admin: Bytes<32>;
+export ledger is_active: Boolean;
+export ledger total_attestations: Counter;
+export ledger max_attestations: Uint<32>;
+export ledger nullifiers: Set<Bytes<32>>;
+export ledger attestation_log: Map<Bytes<32>, Bytes<32>>;
+export sealed ledger contract_version: Bytes<32>;
+
+// ═══════════════════════════════════════════════════
+// PRIVATE WITNESSES — never leave the client browser
+// ═══════════════════════════════════════════════════
+
+witness get_liquid_balance(): Uint<64>;
+witness get_firm_secret(): Bytes<32>;
+witness admin_secret(): Bytes<32>;
+
+// ═══════════════════════════════════════════════════
+// CONSTRUCTOR — called once at deploy
+// ═══════════════════════════════════════════════════
+
+constructor(
+    threshold: Uint<64>,
+    session: Bytes<32>,
+    deadline: Uint<64>,
+    broker: Bytes<32>,
+    admin_hash: Bytes<32>,
+    cap: Uint<32>
+) {
+    min_solvency_threshold = disclose(threshold);
+    trade_session_id = disclose(session);
+    session_deadline = disclose(deadline);
+    broker_id = disclose(broker);
+    admin = disclose(admin_hash);
+    is_active = disclose(true);
+    max_attestations = disclose(cap);
+    contract_version = disclose(pad(32, "SilentSolvent:v1.0"));
+}
+
+// ═══════════════════════════════════════════════════
+// CORE CIRCUIT — Zero-Knowledge Solvency Attestation
+// ═══════════════════════════════════════════════════
+
+export circuit verify_solvency(): [] {
+    assert(disclose(is_active), "Trade session is paused");
+    assert(blockTimeLt(disclose(session_deadline)), "Trade session has expired");
+    assert(disclose(total_attestations) < disclose(max_attestations), "Attestation cap reached");
+
+    const balance = get_liquid_balance();
+    assert(balance >= min_solvency_threshold, "Insufficient liquidity for trade execution");
+
+    const firm_key = get_firm_secret();
+    const nul = make_nullifier(firm_key, trade_session_id);
+    assert(!nullifiers.member(disclose(nul)), "Firm already attested in this session");
+
+    nullifiers.insert(disclose(nul));
+    attestation_log.insert(disclose(nul), disclose(trade_session_id));
+    total_attestations.increment(1);
+}
+
+// ═══════════════════════════════════════════════════
+// ADMIN CIRCUITS — session management
+// ═══════════════════════════════════════════════════
+
+export circuit update_session(
+    new_threshold: Uint<64>,
+    new_session: Bytes<32>,
+    new_deadline: Uint<64>,
+    new_broker: Bytes<32>,
+    new_cap: Uint<32>
+): [] {
+    const sk = admin_secret();
+    assert(admin == admin_public_key(sk), "Not authorized");
+    min_solvency_threshold = disclose(new_threshold);
+    trade_session_id = disclose(new_session);
+    session_deadline = disclose(new_deadline);
+    broker_id = disclose(new_broker);
+    max_attestations = disclose(new_cap);
+    is_active = disclose(true);
+}
+
+export circuit pause_session(): [] {
+    const sk = admin_secret();
+    assert(admin == admin_public_key(sk), "Not authorized");
+    is_active = disclose(false);
+}
+
+export circuit resume_session(): [] {
+    const sk = admin_secret();
+    assert(admin == admin_public_key(sk), "Not authorized");
+    is_active = disclose(true);
+}
+
+// ═══════════════════════════════════════════════════
+// PURE CIRCUITS — deterministic utility functions
+// ═══════════════════════════════════════════════════
+
+export pure circuit admin_public_key(sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "ssolv:admin:v1"), sk]);
+}
+
+export pure circuit make_nullifier(firm_secret: Bytes<32>, session: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<3, Bytes<32>>>([
+        pad(32, "ssolv:nullifier:v1"),
+        firm_secret,
+        session
+    ]);
+}

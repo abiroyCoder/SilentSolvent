@@ -1,0 +1,49 @@
+name: SilentSolvent CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Compact compiler
+        run: |
+          wget https://github.com/midnight-ntwrk/compact/releases/download/v0.31.0/compact-0.31.0-linux-x86_64.tar.gz
+          tar -xvf compact-0.31.0-linux-x86_64.tar.gz
+          echo "$(pwd)/compact-0.31.0-linux-x86_64/bin" >> $GITHUB_PATH
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Compile Compact Contract
+        run: yarn compile
+
+      - name: Start Midnight Devnet
+        run: yarn env:up
+
+      - name: Wait for DUST
+        run: yarn ts-node --esm scripts/wait-for-dust.ts
+
+      - name: Run Contract Tests
+        run: yarn test:local
+
+      - name: Copy Assets for Frontend
+        run: yarn copy:managed
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          yarn install
+          yarn build
