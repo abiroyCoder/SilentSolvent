@@ -22,6 +22,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@midnight-ntwrk/ledger-v8': path.resolve(__dirname, '../node_modules/@midnight-ntwrk/midnight-js-protocol/node_modules/@midnight-ntwrk/ledger-v8'),
+      '@midnight-ntwrk/onchain-runtime-v3': path.resolve(__dirname, '../node_modules/@midnight-ntwrk/compact-runtime/node_modules/@midnight-ntwrk/onchain-runtime-v3'),
       'isomorphic-ws': path.resolve(__dirname, './src/isomorphic-ws-fix.mjs'),
       buffer: 'buffer',
     }

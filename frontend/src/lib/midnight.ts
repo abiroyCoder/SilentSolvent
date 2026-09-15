@@ -101,8 +101,15 @@ export async function createConnectedSession(api: any): Promise<ConnectedSession
 
   const proofProvider = {
     async proveTx(unprovenTx: any, _config: any) {
-      const { CostModel } = await import('@midnight-ntwrk/ledger-v8');
-      return unprovenTx.prove(provingProvider, CostModel.initialCostModel());
+      let CostModelClass: any;
+      try {
+        const protocolLedger = await import('@midnight-ntwrk/midnight-js-protocol/ledger');
+        CostModelClass = protocolLedger.CostModel;
+      } catch {
+        const ledgerV8 = await import('@midnight-ntwrk/ledger-v8');
+        CostModelClass = ledgerV8.CostModel;
+      }
+      return unprovenTx.prove(provingProvider, CostModelClass.initialCostModel());
     },
   };
 
@@ -113,8 +120,15 @@ export async function createConnectedSession(api: any): Promise<ConnectedSession
       const txHex = toHex(tx.serialize());
       const balanced = await api.balanceUnsealedTransaction(txHex);
       if (!balanced?.tx) throw new Error('balanceUnsealedTransaction failed');
-      const { Transaction } = await import('@midnight-ntwrk/ledger-v8');
-      return Transaction.deserialize('signature', 'proof', 'binding', fromHex(balanced.tx));
+      let TransactionClass: any;
+      try {
+        const protocolLedger = await import('@midnight-ntwrk/midnight-js-protocol/ledger');
+        TransactionClass = protocolLedger.Transaction;
+      } catch {
+        const ledgerV8 = await import('@midnight-ntwrk/ledger-v8');
+        TransactionClass = ledgerV8.Transaction;
+      }
+      return TransactionClass.deserialize('signature', 'proof', 'binding', fromHex(balanced.tx));
     },
   };
 
