@@ -61,7 +61,7 @@ export default function AdminPage() {
       setContractAddress(newAddress);
       setActiveContract(newAddress);
       setDeployStatus(`Deployed successfully at: ${newAddress}`);
-      setTimeout(fetchState, 3000); // Wait for indexer
+      setTimeout(refetch, 3000); // Wait for indexer
     } catch (e: any) {
       setDeployStatus(`Deploy failed: ${e.message}`);
     } finally {
