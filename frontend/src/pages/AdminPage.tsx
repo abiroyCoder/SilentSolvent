@@ -9,9 +9,18 @@ import { fromHex } from '../lib/midnight';
 import { Settings, Shield, PlusCircle, PauseCircle, PlayCircle, RefreshCw } from 'lucide-react';
 import { useContractState } from '../hooks/useContractState';
 
-function getCompiledContract() {
+const defaultWitnesses = {
+  get_liquid_balance: () => 0n,
+  get_firm_secret: () => new Uint8Array(32),
+  admin_secret: () => new Uint8Array(32),
+};
+
+function getCompiledContract(customWitnesses?: Record<string, any>) {
   return CompiledContract.make('SilentSolventContract', Contract).pipe(
-    CompiledContract.withVacantWitnesses,
+    CompiledContract.withWitnesses({
+      ...defaultWitnesses,
+      ...(customWitnesses || {}),
+    }),
     CompiledContract.withCompiledFileAssets(new URL('/managed', window.location.origin).toString()),
   ) as any;
 }
@@ -53,7 +62,7 @@ export default function AdminPage() {
 
       const deployed = await deployContract(session.providers as any, {
         privateStateId: 'silentsolvent-admin',
-        compiledContract: getCompiledContract(),
+        compiledContract: getCompiledContract({ admin_secret: () => skBytes }),
         initialPrivateState: {},
         args: [threshold, sessionId, deadline, brokerId, adminHash, cap]
       });
@@ -77,11 +86,14 @@ export default function AdminPage() {
     
     try {
       setDeployStatus(`${isCurrentlyActive ? 'Pausing' : 'Resuming'} session...`);
-      await submitCallTx(session.providers as any, { contractAddress: activeContract } as any, {
+      const skBytes = fromHex(adminSk);
+      await submitCallTx(session.providers as any, {
+        compiledContract: getCompiledContract({ admin_secret: () => skBytes }),
+        contractAddress: activeContract,
         circuitId: circuit,
-        witnesses: { admin_secret: () => fromHex(adminSk) },
+        witnesses: { admin_secret: () => skBytes },
         args: []
-      });
+      } as any);
       setDeployStatus(`Session ${isCurrentlyActive ? 'paused' : 'resumed'}.`);
       setTimeout(refetch, 3000);
     } catch (e: any) {

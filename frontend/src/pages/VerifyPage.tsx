@@ -9,9 +9,18 @@ import { fromHex, toHex } from '../lib/midnight';
 import { Shield, ShieldAlert, Lock, ArrowRight, CheckCircle2, Clock, Activity, Fingerprint } from 'lucide-react';
 import { useContractState } from '../hooks/useContractState';
 
-function getCompiledContract() {
+const defaultWitnesses = {
+  get_liquid_balance: () => 0n,
+  get_firm_secret: () => new Uint8Array(32),
+  admin_secret: () => new Uint8Array(32),
+};
+
+function getCompiledContract(customWitnesses?: Record<string, any>) {
   return CompiledContract.make('SilentSolventContract', Contract).pipe(
-    CompiledContract.withVacantWitnesses,
+    CompiledContract.withWitnesses({
+      ...defaultWitnesses,
+      ...(customWitnesses || {}),
+    }),
     CompiledContract.withCompiledFileAssets(new URL('/managed', window.location.origin).toString()),
   ) as any;
 }
@@ -61,16 +70,18 @@ export default function VerifyPage() {
     try {
       if (session && isConnected) {
         const secretBytes = fromHex(firmSecret);
+        const witnesses = {
+          get_liquid_balance: () => balance,
+          get_firm_secret: () => secretBytes,
+          admin_secret: () => new Uint8Array(32),
+        };
         
         const callTxData = await createUnprovenCallTx(session.providers as any, {
-          compiledContract: getCompiledContract(),
+          compiledContract: getCompiledContract(witnesses),
           contractAddress: getContractAddress(),
           circuitId: 'verify_solvency',
           args: [],
-          witnesses: {
-            get_liquid_balance: () => balance,
-            get_firm_secret: () => secretBytes,
-          }
+          witnesses,
         });
 
         const id = await submitTxAsync(session.providers as any, {
