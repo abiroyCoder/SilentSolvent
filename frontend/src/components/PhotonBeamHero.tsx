@@ -1,11 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, ArrowRight, Lock, Terminal, Activity, Database, Check } from 'lucide-react';
+import { Shield, Database } from 'lucide-react';
 
-/**
- * Direct implementation inspired by pulkitxm/claude-directory (hero-sections/xero-encryption-hero)
- * Dynamic SVG photon beam connecting Private Witness (Input) -> Compact ZK Kernel (Transform) -> Verified Shield (Consensus)
- */
 export default function PhotonBeamHero() {
   const pipelineRef = useRef<HTMLDivElement>(null);
   const nodeStackRef = useRef<HTMLDivElement>(null);
@@ -137,17 +133,17 @@ export default function PhotonBeamHero() {
       {/* SYSTEM RUNTIME BADGE */}
       <div className="hero-status-pill">
         <span className="hero-status-dot" />
-        <span className="mono text-[11px] font-bold text-accent tracking-[0.08em]">
-          MIDNIGHT NETWORK // TESTNET PREPROD // COMPACT ZK-SNARK KERNEL
+        <span className="mono text-[11px] font-bold text-text-0 tracking-[0.1em]">
+          MIDNIGHT PREPROD // COMPACT ZK-SNARK
         </span>
       </div>
 
-      {/* PHOTON BEAM PIPELINE (From xero-encryption-hero) */}
+      {/* PHOTON BEAM PIPELINE (Black / White / Emerald theme) */}
       <div className="icon-pipeline" ref={pipelineRef}>
         <svg className="beam-svg" aria-hidden="true">
           <defs>
             <filter id="glow-filter" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
             <linearGradient
@@ -159,9 +155,9 @@ export default function PhotonBeamHero() {
               y2="0%"
               ref={gradientRef}
             >
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
-              <stop offset="25%" stopColor="#3b82f6" stopOpacity="0.9" />
-              <stop offset="50%" stopColor="#60a5fa" stopOpacity="1" />
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+              <stop offset="25%" stopColor="#ffffff" stopOpacity="0.8" />
+              <stop offset="50%" stopColor="#ffffff" stopOpacity="1" />
               <stop offset="75%" stopColor="#22c55e" stopOpacity="0.9" />
               <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
             </linearGradient>
@@ -170,7 +166,7 @@ export default function PhotonBeamHero() {
             <path
               ref={beamGlowRef}
               stroke="url(#beam-gradient)"
-              strokeWidth="4"
+              strokeWidth="3"
               fill="none"
               filter="url(#glow-filter)"
             />
@@ -178,27 +174,27 @@ export default function PhotonBeamHero() {
           <path
             ref={beamCoreRef}
             stroke="url(#beam-gradient)"
-            strokeWidth="1.5"
+            strokeWidth="1.2"
             fill="none"
           />
         </svg>
 
         {/* NODE 1: PRIVATE WITNESS INPUT */}
         <div className="pipeline-node-wrap">
-          <div className="icon-node node-light-left" id="node-stack" ref={nodeStackRef} title="Private Fund Witness">
-            <Database size={20} className="text-accent" />
+          <div className="icon-node" id="node-stack" ref={nodeStackRef} title="Private Fund Witness">
+            <Database size={18} className="text-text-0" />
           </div>
           <span className="pipeline-node-caption">PRIVATE WITNESS</span>
         </div>
 
         <div className="pipeline-line" />
 
-        {/* NODE 2: COMPACT ZK TRANSFORMER WITH PARTICLE SPLASH */}
+        {/* NODE 2: COMPACT ZK TRANSFORMER */}
         <div className="pipeline-center">
           <div className="splash" ref={splashRef} />
           <div className="pipeline-node-wrap">
             <div className="icon-node-center" id="node-x" ref={nodeXRef} title="Compact ZK-SNARK Prover">
-              <span className="mono font-extrabold text-[16px] text-accent">ZK</span>
+              <span className="mono font-extrabold text-[14px] text-text-0">ZK</span>
             </div>
             <span className="pipeline-node-caption">COMPACT KERNEL</span>
           </div>
@@ -208,33 +204,29 @@ export default function PhotonBeamHero() {
 
         {/* NODE 3: VERIFIED LEDGER SHIELD */}
         <div className="pipeline-node-wrap">
-          <div className="icon-node node-light-right" id="node-shield" ref={nodeShieldRef} title="Verified Ledger State">
-            <Shield size={20} className="text-green" />
+          <div className="icon-node" id="node-shield" ref={nodeShieldRef} title="Verified Ledger State">
+            <Shield size={18} className="text-green" />
           </div>
-          <span className="pipeline-node-caption text-green">SOLVENCY ATTESTED</span>
+          <span className="pipeline-node-caption text-green">VERIFIED ON-CHAIN</span>
         </div>
       </div>
 
-      {/* HERO HEADLINE & ACTIONS */}
+      {/* MINIMAL HERO COPY (No wordy walls of text) */}
       <div className="hero-content">
         <h1 className="hero-heading">
-          Institutional Liquidity.
-          <strong>Zero Capital Exposure.</strong>
+          SILENT SOLVENT
+          <strong>ZERO-KNOWLEDGE OTC ATTESTATION</strong>
         </h1>
         <p className="hero-sub">
-          Bilateral OTC block trades ($1M – $50M) mandate Proof of Funds. Sharing custody addresses doxxes treasury allocations to Arkham & MEV front-runners.
-          SilentSolvent proves capitalization locally in WebAssembly via Midnight Zero-Knowledge proofs.
+          Prove institutional liquidity without revealing balances, wallet addresses, or treasury holdings.
         </p>
 
         <div className="hero-actions-bar">
           <Link to="/verify" className="bracket-btn-primary">
-            [ EXECUTE_SOLVENCY_PROOF ]
+            [ VERIFY SOLVENCY ]
           </Link>
           <Link to="/explorer" className="bracket-btn-secondary">
-            [ VIEW_LIVE_TELEMETRY ]
-          </Link>
-          <Link to="/admin" className="bracket-btn-ghost">
-            [ OTC_DESK_CONTROLS ]
+            [ LIVE SESSIONS ]
           </Link>
         </div>
       </div>

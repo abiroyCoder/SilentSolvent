@@ -131,21 +131,18 @@ export default function InteractiveConsoleDeck() {
   return (
     <section className="terminal-deck-section">
       <div className="section-header">
-        <div className="section-tag">OPERATOR CONTROL DECK // INTERACTIVE CONSOLE</div>
-        <h2 className="section-title">Institutional Terminal & Telemetry Feed</h2>
-        <p className="section-sub">
-          Directly execute smart contract verification routines and observe live zero-knowledge circuit telemetry.
-        </p>
+        <div className="section-tag">TERMINAL // TELEMETRY</div>
+        <h2 className="section-title">Operator Console</h2>
       </div>
 
       <div className="deck-grid">
         {/* INTERACTIVE CONSOLE WINDOW */}
         <div className="ascii-window">
           <div className="window-header">
-            <span className="mono text-[11px] font-bold uppercase text-accent">
-              ZSH — OPERATOR INTERFACE
+            <span className="mono text-[11px] font-bold uppercase text-text-0">
+              TERMINAL // REPL
             </span>
-            <span className="mono text-[10px] text-text-2">--TTY --LIVE</span>
+            <span className="mono text-[10px] text-text-2">--LIVE</span>
           </div>
 
           <div className="window-stdout">
@@ -164,7 +161,7 @@ export default function InteractiveConsoleDeck() {
               >
                 {line.type === 'in' ? (
                   <>
-                    <span className="text-accent mr-6">fund@midnight:~$</span>
+                    <span className="text-text-1 mr-6">fund@midnight:~$</span>
                     <span className="text-text-0">{line.text}</span>
                   </>
                 ) : (
@@ -176,11 +173,11 @@ export default function InteractiveConsoleDeck() {
           </div>
 
           <form onSubmit={handleSubmit} className="window-prompt-row">
-            <span className="text-accent mono text-[12px]">fund@midnight:~$</span>
+            <span className="text-text-1 mono text-[12px]">fund@midnight:~$</span>
             <input
               type="text"
               className="window-input mono"
-              placeholder="type a command, e.g. prove 10000000"
+              placeholder="e.g. status, prove 10000000"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               autoComplete="off"
@@ -189,7 +186,7 @@ export default function InteractiveConsoleDeck() {
           </form>
 
           <div className="window-chips">
-            {['status', 'prove 10000000', 'prove 1000000', 'inspect', 'nullifier', 'clear'].map((chip) => (
+            {['status', 'prove 10000000', 'inspect', 'nullifier', 'clear'].map((chip) => (
               <button
                 key={chip}
                 type="button"
@@ -216,7 +213,7 @@ export default function InteractiveConsoleDeck() {
           <div className="window-stdout text-[12px]">
             <div className="telemetry-log-row">
               <span className="text-text-2 mono">14:28:01</span>
-              <span className="mono font-bold text-accent">[INIT]</span>
+              <span className="mono font-bold text-text-0">[INIT]</span>
               <span className="text-text-1">Session scoped nullifier tree active</span>
             </div>
             <div className="telemetry-log-row">
@@ -236,7 +233,7 @@ export default function InteractiveConsoleDeck() {
             </div>
             <div className="telemetry-log-row">
               <span className="text-text-2 mono">14:28:49</span>
-              <span className="mono font-bold text-accent">[NULL]</span>
+              <span className="mono font-bold text-text-0">[NULL]</span>
               <span className="text-text-1">Nullifier 0x3e18... recorded on-chain</span>
             </div>
             <div className="telemetry-log-row">

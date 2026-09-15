@@ -4,33 +4,33 @@ import { XCircle, CheckCircle2, ShieldAlert, ShieldCheck } from 'lucide-react';
 export default function PrivacyMatrixSection() {
   const comparisonItems = [
     {
-      feature: 'Custody Address Visibility',
-      statusQuo: 'Publicly revealed to counterparty; indexed by Arkham, Nansen, and MEV searchers',
-      silentSolvent: 'Never disclosed or signed; execution uses witness identity decoupling',
+      feature: 'Custody Address',
+      statusQuo: 'Exposed to counterparties & MEV trackers',
+      silentSolvent: 'Concealed in client witness',
       isSecurityBenefit: true,
     },
     {
-      feature: 'Liquidity Balance Disclosure',
-      statusQuo: 'Broker sees exact wallet balance or bank PDF statements, exposing treasury size',
-      silentSolvent: 'Evaluated locally inside browser ZK circuit; desk only receives binary threshold proof',
+      feature: 'Treasury Balance',
+      statusQuo: 'Reveals exact holdings & portfolio size',
+      silentSolvent: 'Binary threshold proof only',
       isSecurityBenefit: true,
     },
     {
-      feature: 'Front-Running / Copy-Trading Risk',
-      statusQuo: 'High: Bots track incoming collateral movements and front-run block trade execution',
-      silentSolvent: 'Zero: No transaction link connects the trader’s custody vault to the attestation',
+      feature: 'Front-Running Risk',
+      statusQuo: 'Mempool & analytics surveillance',
+      silentSolvent: 'Zero on-chain vault link',
       isSecurityBenefit: true,
     },
     {
-      feature: 'Sybil / Ghost Order Mitigation',
-      statusQuo: 'Requires manual broker trust or expensive escrow lockups to prevent fake bids',
-      silentSolvent: 'Cryptographic session nullifiers prevent a single fund from double-attesting',
+      feature: 'Sybil Mitigation',
+      statusQuo: 'Manual escrow lockups',
+      silentSolvent: 'Deterministic session nullifiers',
       isSecurityBenefit: true,
     },
     {
-      feature: 'Settlement Speed',
-      statusQuo: '24 to 72 hours for auditor verification and legal escrow clearing',
-      silentSolvent: '< 3 seconds for local zero-knowledge proof generation and Midnight on-chain commit',
+      feature: 'Verification Time',
+      statusQuo: '24–72 hours via auditors',
+      silentSolvent: '< 3 seconds via Compact ZK',
       isSecurityBenefit: true,
     },
   ];
@@ -38,11 +38,8 @@ export default function PrivacyMatrixSection() {
   return (
     <section className="matrix-section">
       <div className="section-header">
-        <div className="section-tag">INSTITUTIONAL BENCHMARK</div>
-        <h2 className="section-title">Traditional Proof of Funds vs SilentSolvent</h2>
-        <p className="section-sub">
-          Why multi-million dollar institutional OTC desks and quantitative trading funds transition to zero-knowledge attestation.
-        </p>
+        <div className="section-tag">SECURITY BENCHMARK</div>
+        <h2 className="section-title">Privacy Comparison</h2>
       </div>
 
       <div className="matrix-table-card">

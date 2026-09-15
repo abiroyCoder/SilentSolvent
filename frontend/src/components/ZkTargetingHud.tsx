@@ -38,9 +38,9 @@ export default function ZkTargetingHud() {
     <div className="hud-panel-container">
       <div className="hud-top-bar">
         <div className="flex items-center gap-8">
-          <Crosshair size={14} className="text-accent" />
-          <span className="mono text-[11px] font-bold text-accent uppercase">
-            TARGETING HUD // ZK-SNARK ACQUISITION
+          <Crosshair size={14} className="text-text-0" />
+          <span className="mono text-[11px] font-bold text-text-0 uppercase">
+            TARGETING HUD // ACQUISITION
           </span>
         </div>
         <div className="flex items-center gap-12 mono text-[11px] text-text-2">
@@ -78,19 +78,19 @@ export default function ZkTargetingHud() {
         {/* TARGET TELEMETRY OVERLAY */}
         <div className="hud-telemetry-overlay">
           <div className="telemetry-block">
-            <span className="mono text-[10px] text-text-2">TARGET ENTITY</span>
+            <span className="mono text-[10px] text-text-2">TARGET</span>
             <span className="mono text-[12px] font-bold text-text-0">0x7F2A...3C89 [ANON]</span>
           </div>
 
           <div className="telemetry-block">
-            <span className="mono text-[10px] text-text-2">OTC THRESHOLD</span>
-            <span className="mono text-[12px] font-bold text-accent">$5,000,000.00</span>
+            <span className="mono text-[10px] text-text-2">THRESHOLD</span>
+            <span className="mono text-[12px] font-bold text-text-0">$5,000,000.00</span>
           </div>
 
           <div className="telemetry-block">
-            <span className="mono text-[10px] text-text-2">PROOF INTEGRITY</span>
+            <span className="mono text-[10px] text-text-2">STATUS</span>
             <span className="mono text-[12px] font-bold text-green">
-              {hudState === 'LOCKED' ? '100% MATHEMATICALLY VERIFIED' : 'EVALUATING WITNESS...'}
+              {hudState === 'LOCKED' ? 'VERIFIED' : 'EVALUATING...'}
             </span>
           </div>
         </div>
@@ -98,11 +98,11 @@ export default function ZkTargetingHud() {
 
       <div className="hud-bottom-status">
         <span className="mono text-[11px] text-text-2 flex items-center gap-6">
-          <Cpu size={12} className="text-accent" />
-          CIRCUIT: verify_solvency() // BN254 ZKIR // ZERO LEAKAGE
+          <Cpu size={12} className="text-text-0" />
+          CIRCUIT: verify_solvency() // BN254
         </span>
         <span className="mono text-[11px] text-green flex items-center gap-4">
-          <Check size={12} /> MIDNIGHT PREPROD READY
+          <Check size={12} /> PREPROD SYNCHRONIZED
         </span>
       </div>
     </div>

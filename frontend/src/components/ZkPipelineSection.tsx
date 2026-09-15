@@ -19,7 +19,7 @@ const STAGES: StageDetail[] = [
     title: 'Private Witness Generation',
     location: 'BROWSER MEMORY',
     privacy: 'CONFIDENTIAL',
-    summary: 'The fund enters their secret firm seed and liquid balance. These variables reside strictly in RAM and are never dispatched over HTTP, WebSocket, or RPC.',
+    summary: 'Firm secret and liquid balance remain strictly in client RAM. Zero network transmission.',
     codeSnippet: `witness get_liquid_balance(): Uint<32>;\nwitness get_firm_secret(): Bytes<32>;`,
     variables: [
       { name: 'firm_secret', type: 'Bytes<32>', status: 'HIDDEN' },
@@ -33,7 +33,7 @@ const STAGES: StageDetail[] = [
     title: 'Compact Circuit Evaluation',
     location: 'BROWSER MEMORY',
     privacy: 'CONFIDENTIAL',
-    summary: 'The compiled Compact circuit evaluates the mathematical condition balance >= threshold locally. If insolvent, execution reverts instantly without network interaction.',
+    summary: 'Asserts balance >= threshold locally. Insolvent proofs abort before broadcast.',
     codeSnippet: `assert(liquid_balance >= min_solvency_threshold, \n  "Insufficient liquidity for OTC session");`,
     variables: [
       { name: 'min_solvency_threshold', type: 'Uint<32>', status: 'DISCLOSED' },
@@ -47,7 +47,7 @@ const STAGES: StageDetail[] = [
     title: 'Zero-Knowledge Proof Generation',
     location: 'OFF-CHAIN PROVER',
     privacy: 'PROVING ENCLAVE',
-    summary: 'Midnight proving runtime computes polynomial commitments over the BN254 elliptic curve, producing a succinct cryptographic proof without disclosing witness values.',
+    summary: 'Synthesizes BN254 elliptic curve proof and persistent session nullifier.',
     codeSnippet: `val nullifier = persistentHash([\n  pad(32, "ssolv:nullifier:v1"),\n  firm_secret,\n  session_id\n]);`,
     variables: [
       { name: 'zk_proof_pi', type: 'Proof<BN254>', status: 'DISCLOSED' },
@@ -61,7 +61,7 @@ const STAGES: StageDetail[] = [
     title: 'Midnight Ledger Attestation',
     location: 'MIDNIGHT CONSENSUS',
     privacy: 'PUBLIC LEDGER',
-    summary: 'Midnight nodes verify the zk-SNARK in milliseconds. The session counter increments, and the nullifier is stored to prevent double-attestation.',
+    summary: 'Midnight consensus verifies proof and records nullifier on ledger.',
     codeSnippet: `total_attestations = total_attestations + 1;\nnullifiers.insert(nullifier);`,
     variables: [
       { name: 'total_attestations', type: 'Uint<32>', status: 'DISCLOSED' },
@@ -77,11 +77,8 @@ export default function ZkPipelineSection() {
   return (
     <section className="pipeline-section">
       <div className="section-header">
-        <div className="section-tag">CRYPTOGRAPHIC EXECUTION PIPELINE</div>
-        <h2 className="section-title">How Client-Side Verification Works</h2>
-        <p className="section-sub">
-          Midnight separates witness generation from ledger state commitments. Inspect each step of the cryptographic pipeline below.
-        </p>
+        <div className="section-tag">EXECUTION PIPELINE</div>
+        <h2 className="section-title">Cryptographic Pipeline</h2>
       </div>
 
       <div className="pipeline-stepper">
@@ -95,7 +92,7 @@ export default function ZkPipelineSection() {
             >
               <div className="flex items-center justify-between mb-4">
                 <span className="mono text-[11px] text-text-2">{s.step}</span>
-                <span className={`status-pill ${s.privacy === 'CONFIDENTIAL' ? 'pill-green' : s.privacy === 'PROVING ENCLAVE' ? 'pill-amber' : 'pill-blue'}`}>
+                <span className={`status-pill ${s.privacy === 'CONFIDENTIAL' ? 'pill-green' : s.privacy === 'PROVING ENCLAVE' ? 'pill-amber' : 'pill-zinc'}`}>
                   {s.privacy}
                 </span>
               </div>
@@ -108,7 +105,7 @@ export default function ZkPipelineSection() {
       <div className="pipeline-inspector">
         <div className="inspector-left">
           <div className="inspector-meta">
-            <span className="mono text-[11px] text-accent uppercase">{activeStage.step} // {activeStage.location}</span>
+            <span className="mono text-[11px] text-text-0 uppercase">{activeStage.step} // {activeStage.location}</span>
             <span className="mono text-[11px] text-muted">STATE: DETERMINISTIC</span>
           </div>
 
@@ -122,8 +119,8 @@ export default function ZkPipelineSection() {
                 <div key={i} className="variable-row">
                   <span className="mono text-[12px] text-text-0">{v.name}</span>
                   <span className="mono text-[11px] text-text-2">{v.type}</span>
-                  <span className={`mono text-[11px] font-semibold ${v.status === 'HIDDEN' ? 'text-green' : 'text-accent'}`}>
-                    [{v.status === 'HIDDEN' ? '🔒 PRIVATE' : '🔓 ON-CHAIN'}]
+                  <span className={`mono text-[11px] font-semibold ${v.status === 'HIDDEN' ? 'text-green' : 'text-text-0'}`}>
+                    [{v.status === 'HIDDEN' ? 'PRIVATE' : 'PUBLIC'}]
                   </span>
                 </div>
               ))}

@@ -92,18 +92,15 @@ export default function ScannerCardStream() {
     <section className="scanner-stream-section">
       <div className="section-header flex items-center justify-between">
         <div>
-          <div className="section-tag">LIVE VERIFICATION STREAM // SCANNER DECK</div>
-          <h2 className="section-title">Institutional Block Trade Verification Stream</h2>
-          <p className="section-sub">
-            Observe incoming block trade attestations passing through the Midnight zero-knowledge scanner beam.
-          </p>
+          <div className="section-tag">TELEMETRY // STREAM</div>
+          <h2 className="section-title">Live Attestations</h2>
         </div>
 
         <div className="flex items-center gap-8">
           <div className="speed-badge">
-            <Gauge size={13} className="text-accent" />
-            <span className="mono text-[11px] text-muted uppercase tracking-wider">SCAN RATE</span>
-            <span className="mono text-[12px] font-bold text-accent tabular-nums">00{speed} PX/S</span>
+            <Gauge size={13} className="text-text-0" />
+            <span className="mono text-[11px] text-muted uppercase tracking-wider">RATE</span>
+            <span className="mono text-[12px] font-bold text-text-0 tabular-nums">00{speed} PX/S</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -136,7 +133,7 @@ export default function ScannerCardStream() {
       </div>
 
       <div className="scanner-stream-viewport">
-        {/* LASER SCANNER BEAM (Vertical Laser) */}
+        {/* LASER SCANNER BEAM (Sharp White & Emerald) */}
         <div className="scanner-laser-beam" />
         <div className="scanner-ambient-line" />
 
@@ -148,20 +145,20 @@ export default function ScannerCardStream() {
           {SAMPLE_TRADES.concat(SAMPLE_TRADES).map((trade, idx) => (
             <div key={`${trade.id}-${idx}`} className="trade-stream-card">
               <div className="card-top-row">
-                <span className="mono text-[11px] text-accent font-semibold">{trade.sessionCode}</span>
+                <span className="mono text-[11px] text-text-0 font-semibold">{trade.sessionCode}</span>
                 <span className="mono text-[10px] text-green border border-[var(--green)] px-4 py-1 rounded">
                   {trade.status}
                 </span>
               </div>
 
               <div className="mt-8">
-                <div className="text-[11px] text-muted mono">OTC DESK</div>
+                <div className="text-[10px] text-text-2 mono">COUNTERPARTY</div>
                 <div className="font-bold text-[13px] text-text-0">{trade.broker}</div>
               </div>
 
               <div className="mt-8">
-                <div className="text-[11px] text-muted mono">CAPITAL REQUIREMENT</div>
-                <div className="font-bold text-[16px] text-accent mono">{trade.thresholdUsd}</div>
+                <div className="text-[10px] text-text-2 mono">THRESHOLD</div>
+                <div className="font-bold text-[15px] text-text-0 mono">{trade.thresholdUsd}</div>
               </div>
 
               <div className="trade-card-ascii-strip">
