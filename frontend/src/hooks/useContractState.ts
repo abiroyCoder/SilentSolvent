@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getContractAddress, INDEXER_URL, INDEXER_WS } from '../config';
 import { createPatchedPublicDataProvider } from '../lib/midnight';
+import { ledger } from '../managed/contract/index.js';
 
 // Singleton instance to prevent creating multiple WebSocket/Apollo clients and leaking listeners
 let sharedProvider: ReturnType<typeof createPatchedPublicDataProvider> | null = null;
@@ -30,7 +31,13 @@ export function useContractState(pollIntervalMs = 5000, specificAddress?: string
       const provider = getSharedProvider();
       const state = await provider.queryContractState(addressToUse);
       if (state && state.data) {
-        setLedgerState(state.data);
+        try {
+          const decoded = ledger(state.data);
+          setLedgerState(decoded);
+        } catch (decErr) {
+          console.warn('Failed to decode ledger state via ledger():', decErr);
+          setLedgerState(state.data);
+        }
         setLastUpdate(new Date());
         setError(null);
         failureCountRef.current = 0;

@@ -4,8 +4,14 @@ import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-p
 import { ContractState } from '@midnight-ntwrk/compact-runtime';
 import type { MidnightProvider, WalletProvider } from '@midnight-ntwrk/midnight-js-types';
 
-export function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+export function toHex(bytes: Uint8Array | null | undefined): string {
+  if (!bytes) return '';
+  if (typeof bytes === 'string') return bytes;
+  try {
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return '';
+  }
 }
 
 export function fromHex(hex: string): Uint8Array {
