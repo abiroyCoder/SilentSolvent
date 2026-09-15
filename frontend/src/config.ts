@@ -15,10 +15,17 @@ export const getContractAddress = (): string => {
     const cached = localStorage.getItem('silentsolvent_contract_address');
     if (cached) return cached;
   }
-  // Default Preprod address (update after deployment)
-  return import.meta.env.VITE_CONTRACT_ADDRESS || '020000000000000000000000000000000000000000000000000000000000000000';
+  // Default Preprod address
+  return import.meta.env.VITE_CONTRACT_ADDRESS || '79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268';
 };
 
 export const setContractAddress = (address: string) => {
   localStorage.setItem('silentsolvent_contract_address', address);
 };
+
+export const getExplorerContractUrl = (address?: string) =>
+  `https://explorer.1am.xyz/contract/${address || getContractAddress()}?network=preprod`;
+
+export const getExplorerTxUrl = (txId: string) =>
+  `https://explorer.1am.xyz/tx/${txId}?network=preprod`;
+

@@ -4,9 +4,9 @@ import { CompiledContract } from '@midnight-ntwrk/compact-js';
 import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
 import { Contract, pureCircuits } from '../managed/contract/index.js';
 import { useWallet } from '../contexts/WalletContext';
-import { getContractAddress, setContractAddress } from '../config';
+import { getContractAddress, setContractAddress, getExplorerContractUrl } from '../config';
 import { fromHex } from '../lib/midnight';
-import { Settings, Shield, PlusCircle, PauseCircle, PlayCircle, RefreshCw } from 'lucide-react';
+import { Settings, Shield, PlusCircle, PauseCircle, PlayCircle, RefreshCw, ExternalLink } from 'lucide-react';
 import { useContractState } from '../hooks/useContractState';
 
 const defaultWitnesses = {
@@ -148,6 +148,18 @@ export default function AdminPage() {
             {deployStatus && (
               <div className="notice mt-8 text-[12px] mono break-all">
                 {deployStatus}
+                {deployStatus.startsWith('Deployed successfully') && (
+                  <div className="mt-8">
+                    <a
+                      href={getExplorerContractUrl(activeContract)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:underline inline-flex items-center gap-4 text-[12px]"
+                    >
+                      View on 1AM Explorer <ExternalLink size={12} />
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>

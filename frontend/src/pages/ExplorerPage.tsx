@@ -1,6 +1,6 @@
-import { getContractAddress } from '../config';
+import { getContractAddress, getExplorerContractUrl } from '../config';
 import { toHex } from '../lib/midnight';
-import { Search, Clock, ShieldCheck, Activity } from 'lucide-react';
+import { Search, Clock, ShieldCheck, Activity, ExternalLink } from 'lucide-react';
 import { useContractState } from '../hooks/useContractState';
 
 export default function ExplorerPage() {
@@ -37,7 +37,17 @@ export default function ExplorerPage() {
     <div className="page page-wide">
       <div className="flex items-center justify-between mb-24">
         <div className="card-title flex items-center gap-8 text-[16px]"><Search size={18}/> On-Chain Explorer</div>
-        <div className="text-muted text-[12px] flex items-center gap-6"><Activity size={12} className="text-accent"/> Live syncing • Last updated: {lastUpdate.toLocaleTimeString()}</div>
+        <div className="flex items-center gap-16">
+          <a
+            href={getExplorerContractUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[12px] mono text-text-1 hover:text-accent flex items-center gap-4 border border-[var(--border)] px-8 py-4 rounded bg-[var(--bg-1)]"
+          >
+            1AM Explorer <ExternalLink size={12} />
+          </a>
+          <div className="text-muted text-[12px] flex items-center gap-6"><Activity size={12} className="text-accent"/> Live syncing • Last updated: {lastUpdate.toLocaleTimeString()}</div>
+        </div>
       </div>
       
       <div className="grid-2">
@@ -54,7 +64,14 @@ export default function ExplorerPage() {
               <div>
                 <div className="data-row">
                   <span className="data-label">Address</span>
-                  <span className="data-value hash hash-short text-accent">{getContractAddress()}</span>
+                  <a
+                    href={getExplorerContractUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="data-value hash hash-short text-accent hover:underline flex items-center gap-4"
+                  >
+                    {getContractAddress()} <ExternalLink size={11} />
+                  </a>
                 </div>
                 <div className="data-row">
                   <span className="data-label">Status</span>
