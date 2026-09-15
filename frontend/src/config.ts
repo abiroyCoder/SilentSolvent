@@ -1,3 +1,13 @@
+// Default network configuration
+// Defaults to Midnight Preprod unless overridden by environment variables or local dev
+export const INDEXER_URL = 
+  import.meta.env.VITE_INDEXER_URL || 
+  'https://indexer.preprod.midnight.network/api/v4/graphql';
+
+export const INDEXER_WS = 
+  import.meta.env.VITE_INDEXER_WS || 
+  'wss://indexer.preprod.midnight.network/api/v4/graphql/ws';
+
 // Address of the deployed SilentSolvent contract
 // You can override this in localStorage for testing without rebuilding
 export const getContractAddress = (): string => {
