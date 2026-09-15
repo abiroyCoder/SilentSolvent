@@ -1,3 +1,4 @@
+import '../polyfills';
 import { useState, useEffect } from 'react';
 import { CompiledContract } from '@midnight-ntwrk/compact-js';
 import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
