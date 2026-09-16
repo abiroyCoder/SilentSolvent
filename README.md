@@ -7,6 +7,18 @@ SilentSolvent allows an institutional trading fund to prove they have sufficient
 **The Problem**: In institutional crypto, off-exchange block trades ($1M - $50M+) require proof of funds. Today, funds must either share their custody wallet addresses (exposing themselves to front-running algorithms by Arkham/Nansen) or share auditor statements (slow and forged).
 **The Solution**: The broker deploys a session with a minimum threshold on the Midnight Network. The fund connects their wallet and generates a Zero-Knowledge proof locally in their browser. The blockchain verifies the math and records the attestation. Zero data leakage.
 
+## Demo & Screenshots
+
+**[📺 Watch the Demo Video on Google Drive](https://drive.google.com/file/d/15s4wkaOlXco3ur7x6DqAvf2jk8FsmTNR/view?usp=sharing)**
+
+<div align="center">
+  <img src="assets/ui1.png" width="800" alt="SilentSolvent Dashboard" />
+  <br/><br/>
+  <img src="assets/ui2.png" width="800" alt="Verify Solvency Page" />
+  <br/><br/>
+  <img src="assets/ui3.png" width="800" alt="Admin Controls" />
+</div>
+
 ## Privacy Model
 
 | Observer CAN See (On-Chain) | Observer CANNOT See (Your Browser) |
