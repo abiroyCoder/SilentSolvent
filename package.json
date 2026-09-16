@@ -13,7 +13,8 @@
     "test:preprod": "cross-env MIDNIGHT_NETWORK=preprod npm run test",
     "env:up": "docker compose up -d --wait",
     "env:down": "docker compose down",
-    "copy:managed": "xcopy /E /I /Y contracts\\managed\\silentsolvent\\contract frontend\\src\\managed\\contract && xcopy /E /I /Y contracts\\managed\\silentsolvent frontend\\public\\managed"
+    "copy:managed": "xcopy /E /I /Y contracts\\managed\\silentsolvent\\contract frontend\\src\\managed\\contract && xcopy /E /I /Y contracts\\managed\\silentsolvent frontend\\public\\managed",
+    "build": "npm run build -w silentsolvent-frontend"
   },
   "dependencies": {
     "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
