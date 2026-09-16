@@ -10,9 +10,9 @@ import { Shield, ShieldAlert, Lock, ArrowRight, CheckCircle2, Clock, Activity, F
 import { useContractState } from '../hooks/useContractState';
 
 const defaultWitnesses = {
-  get_liquid_balance: () => 0n,
-  get_firm_secret: () => new Uint8Array(32),
-  admin_secret: () => new Uint8Array(32),
+  get_liquid_balance: (ctx: any) => [ctx.privateState, 0n],
+  get_firm_secret: (ctx: any) => [ctx.privateState, new Uint8Array(32)],
+  admin_secret: (ctx: any) => [ctx.privateState, new Uint8Array(32)],
 };
 
 function getCompiledContract(customWitnesses?: Record<string, any>) {
@@ -71,9 +71,9 @@ export default function VerifyPage() {
       if (session && isConnected) {
         const secretBytes = fromHex(firmSecret);
         const witnesses = {
-          get_liquid_balance: () => balance,
-          get_firm_secret: () => secretBytes,
-          admin_secret: () => new Uint8Array(32),
+          get_liquid_balance: (ctx: any) => [ctx.privateState, balance],
+          get_firm_secret: (ctx: any) => [ctx.privateState, secretBytes],
+          admin_secret: (ctx: any) => [ctx.privateState, new Uint8Array(32)],
         };
         
         const callTxData = await createUnprovenCallTx(session.providers as any, {

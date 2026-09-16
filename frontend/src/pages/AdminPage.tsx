@@ -10,9 +10,9 @@ import { Settings, Shield, PlusCircle, PauseCircle, PlayCircle, RefreshCw, Exter
 import { useContractState } from '../hooks/useContractState';
 
 const defaultWitnesses = {
-  get_liquid_balance: () => 0n,
-  get_firm_secret: () => new Uint8Array(32),
-  admin_secret: () => new Uint8Array(32),
+  get_liquid_balance: (ctx: any) => [ctx.privateState, 0n],
+  get_firm_secret: (ctx: any) => [ctx.privateState, new Uint8Array(32)],
+  admin_secret: (ctx: any) => [ctx.privateState, new Uint8Array(32)],
 };
 
 function getCompiledContract(customWitnesses?: Record<string, any>) {
@@ -62,7 +62,7 @@ export default function AdminPage() {
 
       const deployed = await deployContract(session.providers as any, {
         privateStateId: 'silentsolvent-admin',
-        compiledContract: getCompiledContract({ admin_secret: () => skBytes }),
+        compiledContract: getCompiledContract({ admin_secret: (ctx: any) => [ctx.privateState, skBytes] }),
         initialPrivateState: {},
         args: [threshold, sessionId, deadline, brokerId, adminHash, cap]
       });
@@ -88,10 +88,10 @@ export default function AdminPage() {
       setDeployStatus(`${isCurrentlyActive ? 'Pausing' : 'Resuming'} session...`);
       const skBytes = fromHex(adminSk);
       await submitCallTx(session.providers as any, {
-        compiledContract: getCompiledContract({ admin_secret: () => skBytes }),
+        compiledContract: getCompiledContract({ admin_secret: (ctx: any) => [ctx.privateState, skBytes] }),
         contractAddress: activeContract,
         circuitId: circuit,
-        witnesses: { admin_secret: () => skBytes },
+        witnesses: { admin_secret: (ctx: any) => [ctx.privateState, skBytes] },
         args: []
       } as any);
       setDeployStatus(`Session ${isCurrentlyActive ? 'paused' : 'resumed'}.`);
