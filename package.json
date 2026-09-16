@@ -13,7 +13,7 @@
     "test:preprod": "cross-env MIDNIGHT_NETWORK=preprod npm run test",
     "env:up": "docker compose up -d --wait",
     "env:down": "docker compose down",
-    "copy:managed": "xcopy /E /I /Y contracts\\managed\\silentsolvent\\contract frontend\\src\\managed\\contract && xcopy /E /I /Y contracts\\managed\\silentsolvent frontend\\public\\managed",
+    "copy:managed": "node -e \"const fs = require('fs'); fs.cpSync('contracts/managed/silentsolvent/contract', 'frontend/src/managed/contract', {recursive: true}); fs.cpSync('contracts/managed/silentsolvent', 'frontend/public/managed', {recursive: true})\"",
     "build": "npm run build -w silentsolvent-frontend"
   },
   "dependencies": {
