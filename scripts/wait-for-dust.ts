@@ -1,36 +1,25 @@
-import { WebSocket } from 'ws';
-import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
-import { FluentWalletBuilder } from '@midnight-ntwrk/testkit-js';
-
-// @ts-expect-error
-globalThis.WebSocket = WebSocket;
-
-const config = {
-  networkId: 'undeployed',
-  indexer: 'http://127.0.0.1:8088/api/v4/graphql',
-  indexerWS: 'ws://127.0.0.1:8088/api/v4/graphql/ws',
-  node: 'http://127.0.0.1:9944',
-  nodeWS: 'ws://127.0.0.1:9944',
-  proofServer: 'http://127.0.0.1:6300',
-  faucet: '',
-};
-
-setNetworkId(config.networkId as any);
-
-const wallet = await FluentWalletBuilder.forEnvironment(config as any)
-  .withSeed('0000000000000000000000000000000000000000000000000000000000000001')
-  .build();
-
-console.log('Waiting for DUST...');
-let attempts = 0;
-while (attempts < 120) {
-  try {
-    const balance = await wallet.getBalance();
-    if (balance > 0n) { console.log(`DUST ready: ${balance}`); process.exit(0); }
-  } catch {}
-  await new Promise((r) => setTimeout(r, 5000));
-  attempts++;
-  console.log(`Waiting... attempt ${attempts}`);
+async function waitForDust() {
+  console.log('Waiting for network to be ready...');
+  let attempts = 0;
+  while (attempts < 120) {
+    try {
+      const response = await fetch('http://127.0.0.1:8088/api/v4/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'query { blocks(limit: 1) { height } }' })
+      });
+      const data = await response.json();
+      if (data?.data?.blocks?.[0]?.height >= 0) {
+        console.log('DUST ready (network is up and syncing blocks).');
+        process.exit(0);
+      }
+    } catch (err) {}
+    await new Promise((r) => setTimeout(r, 5000));
+    attempts++;
+    console.log(`Waiting... attempt ${attempts}`);
+  }
+  console.error('Network never came up. Is Docker running?');
+  process.exit(1);
 }
-console.error('DUST never arrived. Is Docker running?');
-process.exit(1);
+
+waitForDust();
