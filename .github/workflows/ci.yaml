@@ -14,9 +14,8 @@ jobs:
 
       - name: Install Compact compiler
         run: |
-          wget https://github.com/midnight-ntwrk/compact/releases/download/v0.31.0/compact-0.31.0-linux-x86_64.tar.gz
-          tar -xvf compact-0.31.0-linux-x86_64.tar.gz
-          echo "$(pwd)/compact-0.31.0-linux-x86_64/bin" >> $GITHUB_PATH
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
