@@ -17,10 +17,9 @@ const config = {
 
 setNetworkId(config.networkId as any);
 
-const wallet = await FluentWalletBuilder.newWalletFromSeed(
-  '0000000000000000000000000000000000000000000000000000000000000001',
-  config,
-);
+const wallet = await FluentWalletBuilder.forEnvironment(config as any)
+  .withSeed('0000000000000000000000000000000000000000000000000000000000000001')
+  .build();
 
 console.log('Waiting for DUST...');
 let attempts = 0;
