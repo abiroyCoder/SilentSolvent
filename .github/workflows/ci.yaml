@@ -21,28 +21,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'yarn'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: yarn install
+        run: npm install
 
       - name: Compile Compact Contract
-        run: yarn compile
+        run: npm run compile
 
       - name: Start Midnight Devnet
-        run: yarn env:up
+        run: npm run env:up
 
       - name: Wait for DUST
-        run: yarn ts-node --esm scripts/wait-for-dust.ts
+        run: npx ts-node --esm scripts/wait-for-dust.ts
 
       - name: Run Contract Tests
-        run: yarn test:local
+        run: npm run test:local
 
       - name: Copy Assets for Frontend
-        run: yarn copy:managed
+        run: npm run copy:managed
 
       - name: Build Frontend
         working-directory: ./frontend
         run: |
-          yarn install
-          yarn build
+          npm install
+          npm run build
