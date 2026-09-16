@@ -84,6 +84,13 @@ Broker dashboard to create new liquidity sessions, set threshold requirements, a
 
 ---
 
+#### 4. Automated CI/CD Pipeline
+Fully automated GitHub Actions pipeline validating the Compact contracts, tests, and building the frontend workspace.
+
+![CI/CD Pipeline](assets/cicd.png)
+
+---
+
 ## How it Works: Public State vs Private Witness
 
 SilentSolvent enforces a strict architectural boundary between on-chain ledger state and client-side private witnesses:
