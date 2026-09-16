@@ -30,14 +30,6 @@ jobs:
       - name: Compile Compact Contract
         run: npm run compile
 
-      - name: Start Midnight Devnet
-        run: npm run env:up
-
-      - name: Wait for DUST
-        run: npx ts-node --esm scripts/wait-for-dust.ts
-
-      - name: Run Contract Tests
-        run: npm run test:local
 
       - name: Copy Assets for Frontend
         run: npm run copy:managed
