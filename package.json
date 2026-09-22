@@ -6,7 +6,8 @@
   "workspaces": ["frontend"],
   "engines": { "node": ">=22.0.0" },
   "scripts": {
-    "compile": "compact compile contracts/silentsolvent.compact contracts/managed/silentsolvent",
+    "postinstall": "node scripts/patch-runtime.cjs",
+    "compile": "compact compile contracts/silentsolvent.compact contracts/managed/silentsolvent && node scripts/patch-runtime.cjs",
     "test": "cross-env NODE_OPTIONS='--experimental-vm-modules' vitest run",
     "test:local": "cross-env MIDNIGHT_NETWORK=local npm run test",
     "test:preview": "cross-env MIDNIGHT_NETWORK=preview npm run test",
