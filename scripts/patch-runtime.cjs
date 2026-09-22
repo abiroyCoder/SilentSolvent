@@ -10,35 +10,25 @@ if (fs.existsSync(contractPath)) {
   console.log('Successfully aligned contract index.js checkRuntimeVersion to 0.16.0');
 }
 
-// 2. Patch compact-runtime circuit-context.js for cross-module wasm-bindgen ChargedState identity
-const circuitContextPaths = [
-  path.join(__dirname, '..', 'node_modules', '@midnight-ntwrk', 'compact-runtime', 'dist', 'circuit-context.js'),
-  path.join(__dirname, '..', 'node_modules', '@midnight-ntwrk', 'compact-runtime', 'src', 'circuit-context.ts')
-];
+// 2. Patch compact-runtime circuit-context.js to avoid wasm-bindgen cross-module class identity failure
+const circuitContextPath = path.join(__dirname, '..', 'node_modules', '@midnight-ntwrk', 'compact-runtime', 'dist', 'circuit-context.js');
+if (fs.existsSync(circuitContextPath)) {
+  let content = fs.readFileSync(circuitContextPath, 'utf8');
+  const target = "throw new CompactError(`'contractState' parameter ${contractState} has unexpected type`);";
+  if (content.includes(target)) {
+    content = content.replace(target, "state = (contractState && contractState.data) ? contractState.data : contractState;");
+    fs.writeFileSync(circuitContextPath, content);
+    console.log('Successfully patched circuit-context.js for ChargedState compatibility');
+  }
+}
 
-for (const p of circuitContextPaths) {
-  if (fs.existsSync(p)) {
-    let content = fs.readFileSync(p, 'utf8');
-    const oldCoerce = /const coerceToChargedState = \(contractState[\s\S]*?throw new CompactError[\s\S]*?\};\n?/;
-    const newCoerce = `const coerceToChargedState = (contractState) => {
-    if (contractState instanceof ocrt.ChargedState) {
-        return contractState;
-    }
-    if (contractState instanceof ocrt.ContractState) {
-        return contractState.data;
-    }
-    if (contractState instanceof ocrt.StateValue) {
-        return new ocrt.ChargedState(contractState);
-    }
-    if (contractState && typeof contractState === 'object' && contractState.data) {
-        return contractState.data;
-    }
-    return contractState;
-};`;
-    if (oldCoerce.test(content)) {
-      content = content.replace(oldCoerce, newCoerce);
-      fs.writeFileSync(p, content);
-      console.log('Successfully patched ' + path.basename(p) + ' for ChargedState compatibility');
-    }
+// 3. Polyfill emptyRunningCost in compact-runtime index.js for contracts compiled by newer compact compilers
+const runtimeIndexPath = path.join(__dirname, '..', 'node_modules', '@midnight-ntwrk', 'compact-runtime', 'dist', 'index.js');
+if (fs.existsSync(runtimeIndexPath)) {
+  let content = fs.readFileSync(runtimeIndexPath, 'utf8');
+  if (!content.includes('emptyRunningCost')) {
+    content += '\nexport const emptyRunningCost = () => ({ gas: 0n, memory: 0n });\n';
+    fs.writeFileSync(runtimeIndexPath, content);
+    console.log('Successfully exported emptyRunningCost from compact-runtime/dist/index.js');
   }
 }
