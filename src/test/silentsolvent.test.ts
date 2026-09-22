@@ -4,7 +4,7 @@ import {
   createConstructorContext,
   createCircuitContext,
   dummyContractAddress,
-  emptyZswapLocalState,
+  sampleUserAddress,
 } from '@midnight-ntwrk/compact-runtime';
 import { Contract, pureCircuits, ledger } from '../../contracts/managed/silentsolvent/contract/index.js';
 
@@ -14,6 +14,7 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
   let adminSk: Uint8Array;
   let adminHash: Uint8Array;
   const address = dummyContractAddress();
+  const userAddr = sampleUserAddress();
 
   const sessionId = new Uint8Array(crypto.randomBytes(32));
   const brokerId = new Uint8Array(crypto.randomBytes(32));
@@ -32,7 +33,7 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
     };
     contract = new Contract(witnesses as any);
 
-    const initCtx = createConstructorContext({});
+    const initCtx = createConstructorContext({}, userAddr);
     const initRes = contract.initialState(
       initCtx,
       5000000n,
@@ -61,7 +62,7 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
 
     const circuitCtx = createCircuitContext(
       address,
-      emptyZswapLocalState(),
+      userAddr,
       contractState,
       {}
     );
@@ -82,7 +83,7 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
 
     const circuitCtx = createCircuitContext(
       address,
-      emptyZswapLocalState(),
+      userAddr,
       contractState,
       {}
     );
@@ -100,12 +101,12 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
     };
 
     // First attestation succeeds
-    const ctx1 = createCircuitContext(address, emptyZswapLocalState(), contractState, {});
+    const ctx1 = createCircuitContext(address, userAddr, contractState, {});
     const res1 = contract.circuits.verify_solvency(ctx1);
     contractState = res1.context.currentQueryContext.state;
 
     // Second attestation with same firm secret fails (nullifier collision)
-    const ctx2 = createCircuitContext(address, emptyZswapLocalState(), contractState, {});
+    const ctx2 = createCircuitContext(address, userAddr, contractState, {});
     expect(() => {
       contract.circuits.verify_solvency(ctx2);
     }).toThrow(/Firm already attested in this session/);
@@ -122,7 +123,7 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
       admin_secret: () => [{}, adminSk],
     };
 
-    const ctx = createCircuitContext(address, emptyZswapLocalState(), contractState, {});
+    const ctx = createCircuitContext(address, userAddr, contractState, {});
     const res = contract.circuits.update_session(
       ctx,
       10000000n,
@@ -146,7 +147,7 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
     };
 
     // Pause
-    const pauseCtx = createCircuitContext(address, emptyZswapLocalState(), contractState, {});
+    const pauseCtx = createCircuitContext(address, userAddr, contractState, {});
     const pauseRes = contract.circuits.pause_session(pauseCtx);
     contractState = pauseRes.context.currentQueryContext.state;
 
@@ -154,13 +155,13 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
     expect(state.is_active).toBe(false);
 
     // Verify fails when paused
-    const verifyCtx = createCircuitContext(address, emptyZswapLocalState(), contractState, {});
+    const verifyCtx = createCircuitContext(address, userAddr, contractState, {});
     expect(() => {
       contract.circuits.verify_solvency(verifyCtx);
     }).toThrow(/Trade session is paused/);
 
     // Resume
-    const resumeCtx = createCircuitContext(address, emptyZswapLocalState(), contractState, {});
+    const resumeCtx = createCircuitContext(address, userAddr, contractState, {});
     const resumeRes = contract.circuits.resume_session(resumeCtx);
     contractState = resumeRes.context.currentQueryContext.state;
 
