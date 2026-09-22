@@ -32,3 +32,20 @@ if (fs.existsSync(runtimeIndexPath)) {
     console.log('Successfully exported emptyRunningCost from compact-runtime/dist/index.js');
   }
 }
+
+// 4. Patch onchain-runtime-v3 wasm-bindgen _assertClass for cross-module ESM execution in tests
+const wasmBgPath = path.join(__dirname, '..', 'node_modules', '@midnight-ntwrk', 'onchain-runtime-v3', 'midnight_onchain_runtime_wasm_bg.js');
+if (fs.existsSync(wasmBgPath)) {
+  let content = fs.readFileSync(wasmBgPath, 'utf8');
+  const targetAssert = "function _assertClass(instance, klass) {\n    if (!(instance instanceof klass)) {\n        throw new Error(`expected instance of ${klass.name}`);\n    }\n}";
+  const newAssert = `function _assertClass(instance, klass) {
+    if (instance instanceof klass) return;
+    if (instance && (instance.constructor?.name === klass.name || instance.__wbg_ptr !== undefined)) return;
+    throw new Error(\`expected instance of \${klass.name}\`);
+}`;
+  if (content.includes(targetAssert)) {
+    content = content.replace(targetAssert, newAssert);
+    fs.writeFileSync(wasmBgPath, content);
+    console.log('Successfully patched onchain-runtime-v3 _assertClass for cross-module wasm compatibility');
+  }
+}
