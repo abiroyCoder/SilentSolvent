@@ -6,18 +6,27 @@
 
 A zero-knowledge pre-trade liquidity attestation dApp on [Midnight Network](https://midnight.network) designed for institutional OTC block trades.
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://silentsolvent.netlify.app/)
+[![Preprod Contract](https://img.shields.io/badge/Preprod_Contract-79f209...6eb13268-7B2BF9?style=for-the-badge&logo=midnight)](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)
 [![X Post](https://img.shields.io/badge/X-Launch_Post-black?logo=x)](https://x.com/Abiroywb/status/2100219913646555268?s=20)
 [![CI](https://github.com/abiroyCoder/SilentSolvent/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/abiroyCoder/SilentSolvent/actions/workflows/ci.yaml)
 [![license](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
 
 </div>
 
+> [!IMPORTANT]
+> ### 🌐 Level 2 Mandatory Deliverables & Verification Links
+> * **🚀 Live Demo dApp URL (Netlify)**: **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)**
+> * **⚡ Deployed Preprod Contract Address**: **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)** (Network: **Midnight Preprod**)
+> * **🔍 1AM Block Explorer**: **[View Contract on 1AM Preprod Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)**
+> * **🔗 Deployment Transaction**: [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod)
+
 ---
 
 ## Table of Contents
-1. [Overview and Problem Statement](#overview-and-problem-statement)
-2. [What is SilentSolvent?](#what-is-silentsolvent)
-3. [Contract Address (Deployment Evidence)](#contract-address)
+1. [Live Demo URL & Preprod Contract Address](#live-demo-url--preprod-contract-address)
+2. [Overview and Problem Statement](#overview-and-problem-statement)
+3. [What is SilentSolvent?](#what-is-silentsolvent)
 4. [Submission Verification Checklist](#submission-verification-checklist)
 5. [Interface Screenshots](#interface-screenshots)
 6. [How it Works: Public State vs Private Witness](#how-it-works-public-state-vs-private-witness)
@@ -25,7 +34,27 @@ A zero-knowledge pre-trade liquidity attestation dApp on [Midnight Network](http
 8. [Privacy Model: What an Observer Learns](#privacy-model-what-an-observer-learns)
 9. [Architecture](#architecture)
 10. [Getting Started (Local Development)](#getting-started-local-development)
-11. [Video Demo Walkthrough](#video-demo-walkthrough)
+11. [Demonstration Videos & Live Links](#demonstration-videos--live-links)
+
+---
+
+## Live Demo URL & Preprod Contract Address
+
+SilentSolvent has been compiled with Compact, deployed to the **Midnight Preprod Testnet**, and is actively hosted for public evaluation:
+
+| Deliverable / Parameter | Status | Value / Direct Link |
+| :--- | :--- | :--- |
+| **Live Demo dApp (Level 2 Deliverable)** | **Online** | **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)** |
+| **Network** | **Active** | **Midnight Preprod** |
+| **Deployed Contract Address** | **Verified** | **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)** |
+| **Deployment Transaction** | **Confirmed** | [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod) |
+| **1AM Block Explorer** | **Indexed** | [View Contract on 1AM Preprod Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod) |
+| **On-Chain Ledger State** | `Active` | Synchronized via Preprod Indexer GraphQL API v4 |
+
+#### Preprod Contract Explorer & Live Sync Telemetry
+Below is the live on-chain explorer telemetry confirming contract registration, active status, threshold parameter, and indexing synchronization on Midnight Preprod:
+
+![Midnight Preprod Contract Explorer](assets/preprod_contract_explorer.png)
 
 ---
 
@@ -47,31 +76,12 @@ The broker deploys a session with a minimum threshold on the Midnight Network. T
 
 ---
 
-## Contract Address
-
-SilentSolvent is compiled with Compact and deployed live on the **Midnight Preprod Testnet**.
-
-| Parameter | Value / Link |
-| :--- | :--- |
-| **Network** | **Midnight Preprod** |
-| **Contract Address** | `79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268` |
-| **Deployment Transaction** | [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod) |
-| **1AM Block Explorer** | [View on 1AM Preprod Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod) |
-| **Live Deployed dApp** | [https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/) |
-| **On-Chain Status** | `Active` (Synchronized via Preprod Indexer GraphQL API v4) |
-
-#### Preprod Contract Explorer & Live Sync Telemetry
-Below is the live on-chain explorer telemetry confirming contract registration, active status, threshold parameter, and indexing synchronization on Midnight Preprod:
-
-![Midnight Preprod Contract Explorer](assets/preprod_contract_explorer.png)
-
----
-
 ## Submission Verification Checklist
 
 | Requirement | Verification Method | Artifact / Resource Link |
 | :--- | :--- | :--- |
-| **Deployed Contract (Preprod)** | On-Chain Verification | [`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod) ([1AM Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)) |
+| **Live Demo dApp (Level 2 Deliverable)** | Web Browser Access | **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)** |
+| **Deployed Preprod Contract Address** | On-Chain Verification | **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)** ([1AM Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)) |
 | **Compact Smart Contract** | Review logic and circuits | [`contracts/silentsolvent.compact`](contracts/silentsolvent.compact) |
 | **Circuits and Keys** | Inspect generated artifacts | [`contracts/managed/silentsolvent/`](contracts/managed/silentsolvent/) |
 | **Automated Test Suite** | Execute `npm run test` | Passing tests in the root testing environment |
@@ -136,8 +146,10 @@ Zero-knowledge proofs are generated locally by the fund. An observer or broker *
 * **Live Preprod Deployment**: Deployed the verified SilentSolvent Compact contract to **Midnight Preprod** at contract address [`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod) via transaction [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod).
 
 ### Level 2: Waxing Crescent - Frontend Integration
-* **Browser Wallet Integration**: Integrated the 1AM browser wallet via `@midnight-ntwrk/dapp-connector-api`. 
-* **Client-Side Proving**: The React frontend interfaces with the deployed contract to coordinate local ZK proof generation and submit transactions.
+* **Live Demo dApp URL (Mandatory Deliverable)**: Production frontend application hosted and accessible live at **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)**.
+* **Deployed Preprod Contract Address (Mandatory Deliverable)**: Connected and live-synchronized with verified Midnight Preprod contract **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)**.
+* **Browser Wallet Integration**: Integrated the 1AM browser wallet via `@midnight-ntwrk/dapp-connector-api` with network and status detection. 
+* **Client-Side Proving**: The React frontend interfaces with the deployed contract to coordinate local ZK proof generation via the wallet's proving provider and submit transactions.
 * **Observable Privacy Behavior**: When evaluating threshold predicates, exact capital amounts remain entirely within client memory. Only the cryptographic proof reaches the ledger.
 
 ### Level 3: First Quarter - Production-Grade dApp
@@ -216,11 +228,12 @@ silentsolvent/
 
 ---
 
-## Video Demo Walkthrough
+## Demonstration Videos & Live Links
 
-A comprehensive demonstration video showing 1AM wallet connection, contract deployment, zero-knowledge attestation, and local proof evaluation:
-
-* **[📺 Watch SilentSolvent Demonstration Video on Google Drive](https://drive.google.com/file/d/15s4wkaOlXco3ur7x6DqAvf2jk8FsmTNR/view?usp=sharing)**
+* **🚀 [Live Web dApp (Netlify)](https://silentsolvent.netlify.app/)**
+* **⚡ [Deployed Contract on 1AM Preprod Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)**: `79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`
+* **📺 [Watch SilentSolvent Walkthrough on Google Drive](https://drive.google.com/file/d/15s4wkaOlXco3ur7x6DqAvf2jk8FsmTNR/view?usp=sharing)**
+* **🐦 [Official Announcement on X](https://x.com/Abiroywb/status/2100219913646555268?s=20)**
 
 ---
 
