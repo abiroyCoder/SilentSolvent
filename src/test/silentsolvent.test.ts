@@ -43,9 +43,9 @@ describe('SilentSolvent Smart Contract Circuit & State Verification', () => {
       adminHash,
       50n
     );
-    contractState = initRes.currentContractState;
+    contractState = initRes.currentContractState.data;
 
-    const state = ledger(contractState.data);
+    const state = ledger(contractState);
     expect(state.min_solvency_threshold).toEqual(5000000n);
     expect(state.is_active).toBe(true);
     expect(state.max_attestations).toEqual(50n);
