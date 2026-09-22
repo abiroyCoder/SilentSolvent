@@ -15,46 +15,58 @@ A zero-knowledge pre-trade liquidity attestation dApp on [Midnight Network](http
 </div>
 
 > [!IMPORTANT]
-> ### 🌐 Level 2 Mandatory Deliverables & Verification Links
+> ### 🌐 Level 2 & Level 3 Mandatory Deliverables & Verification Links
+> * **⚡ Contract Address (Preprod)**: **`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`** ([1AM Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod))
+> * **⚡ Hex Representation**: `0x79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268` (Network: **Midnight Preprod**)
 > * **🚀 Live Demo dApp URL (Netlify)**: **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)**
-> * **⚡ Deployed Preprod Contract Address**: **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)** (Network: **Midnight Preprod**)
+> * **📄 Dedicated Architecture Proposal**: **[`PROPOSAL.md`](PROPOSAL.md)** (Covers Users, Kachina Data Model, Why Midnight, Mainnet Feasibility by Level 6)
 > * **🔍 1AM Block Explorer**: **[View Contract on 1AM Preprod Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)**
 > * **🔗 Deployment Transaction**: [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod)
 
 ---
 
 ## Table of Contents
-1. [Live Demo URL & Preprod Contract Address](#live-demo-url--preprod-contract-address)
-2. [Overview and Problem Statement](#overview-and-problem-statement)
-3. [What is SilentSolvent?](#what-is-silentsolvent)
-4. [Submission Verification Checklist](#submission-verification-checklist)
-5. [Interface Screenshots](#interface-screenshots)
-6. [How it Works: Public State vs Private Witness](#how-it-works-public-state-vs-private-witness)
-7. [Hackathon Execution (Levels 1-4)](#hackathon-execution-levels-1-4)
-8. [Privacy Model: What an Observer Learns](#privacy-model-what-an-observer-learns)
-9. [Architecture](#architecture)
-10. [Getting Started (Local Development)](#getting-started-local-development)
-11. [Demonstration Videos & Live Links](#demonstration-videos--live-links)
+1. [Contract Address (Preprod) & Live Demo URL](#contract-address-preprod)
+2. [Project Proposal & Scope Feasibility (Level 3)](#project-proposal--scope-feasibility)
+3. [Overview and Problem Statement](#overview-and-problem-statement)
+4. [What is SilentSolvent?](#what-is-silentsolvent)
+5. [Submission Verification Checklist](#submission-verification-checklist)
+6. [Interface Screenshots](#interface-screenshots)
+7. [How it Works: Public State vs Private Witness](#how-it-works-public-state-vs-private-witness)
+8. [Hackathon Execution (Levels 1-4)](#hackathon-execution-levels-1-4)
+9. [Privacy Model: What an Observer Learns](#privacy-model-what-an-observer-learns)
+10. [Architecture](#architecture)
+11. [Getting Started (Local Development)](#getting-started-local-development)
+12. [Demonstration Videos & Live Links](#demonstration-videos--live-links)
 
 ---
 
-## Live Demo URL & Preprod Contract Address
+## Contract Address (Preprod)
 
-SilentSolvent has been compiled with Compact, deployed to the **Midnight Preprod Testnet**, and is actively hosted for public evaluation:
+SilentSolvent is compiled with Compact and deployed live on the **Midnight Preprod Testnet**:
 
-| Deliverable / Parameter | Status | Value / Direct Link |
-| :--- | :--- | :--- |
-| **Live Demo dApp (Level 2 Deliverable)** | **Online** | **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)** |
-| **Network** | **Active** | **Midnight Preprod** |
-| **Deployed Contract Address** | **Verified** | **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)** |
-| **Deployment Transaction** | **Confirmed** | [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod) |
-| **1AM Block Explorer** | **Indexed** | [View Contract on 1AM Preprod Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod) |
-| **On-Chain Ledger State** | `Active` | Synchronized via Preprod Indexer GraphQL API v4 |
+* **Contract Address (Preprod)**: `79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`
+* **Contract Address (Preprod Hex)**: `0x79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`
+* **Network**: **Midnight Preprod**
+* **Deployment Transaction**: [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod)
+* **1AM Block Explorer URL**: [https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)
+* **Live Demo dApp (Level 2 Deliverable)**: [https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)
+* **On-Chain State Status**: `Active` (Synchronized via Preprod Indexer GraphQL API v4)
 
 #### Preprod Contract Explorer & Live Sync Telemetry
 Below is the live on-chain explorer telemetry confirming contract registration, active status, threshold parameter, and indexing synchronization on Midnight Preprod:
 
 ![Midnight Preprod Contract Explorer](assets/preprod_contract_explorer.png)
+
+---
+
+## Project Proposal & Scope Feasibility
+
+A dedicated architectural document is available in [`PROPOSAL.md`](PROPOSAL.md) addressing all four Level 3 hackathon criteria:
+1. **Product Statement, Problem & Target Users**: Eliminating custody address exposure and front-running in $1M–$50M+ OTC block trades.
+2. **Public Ledger vs. Private Witness Data Model**: Formal specification of public state (`min_solvency_threshold`, `session_deadline`, `nullifiers`) versus private witnesses (`get_liquid_balance`, `get_firm_secret`).
+3. **Why Midnight Specifically?**: Analysis of why transparent blockchains (Ethereum, Solana, EVM L2s) fundamentally fail at confidential solvency checks, and how Midnight's Kachina dual-state architecture and Compact DSL solve this.
+4. **Scope Feasibility for Mainnet by Level 6**: Comprehensive milestone roadmap spanning Levels 1–6 (Multi-session desk portal, Schnorr proof-of-reserve oracles, ZSwap multi-asset aggregation, security audits, and Mainnet launch with regulatory viewing keys).
 
 ---
 
@@ -80,11 +92,12 @@ The broker deploys a session with a minimum threshold on the Midnight Network. T
 
 | Requirement | Verification Method | Artifact / Resource Link |
 | :--- | :--- | :--- |
+| **Contract Address (Preprod)** | On-Chain Verification | **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)** ([1AM Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)) |
 | **Live Demo dApp (Level 2 Deliverable)** | Web Browser Access | **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)** |
-| **Deployed Preprod Contract Address** | On-Chain Verification | **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)** ([1AM Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)) |
+| **Project Proposal (Level 3 Deliverable)** | Architecture & Scope Review | **[`PROPOSAL.md`](PROPOSAL.md)** (Answers all 4 questions) |
 | **Compact Smart Contract** | Review logic and circuits | [`contracts/silentsolvent.compact`](contracts/silentsolvent.compact) |
 | **Circuits and Keys** | Inspect generated artifacts | [`contracts/managed/silentsolvent/`](contracts/managed/silentsolvent/) |
-| **Automated Test Suite** | Execute `npm run test` | Passing tests in the root testing environment |
+| **Automated Test Suite** | Execute `npm run test` | Passing 6-circuit tests via `@midnight-ntwrk/compact-runtime` |
 | **CI/CD Pipeline** | GitHub Actions | [Workflow File](.github/workflows/ci.yaml) and [Passing Action Runs](https://github.com/abiroyCoder/SilentSolvent/actions) |
 | **Wallet Integration** | Launch UI | Connect 1AM wallet in frontend |
 | **Privacy Model Documentation** | Review specification | [Privacy Model Section](#privacy-model-what-an-observer-learns) |
@@ -154,7 +167,8 @@ Zero-knowledge proofs are generated locally by the fund. An observer or broker *
 
 ### Level 3: First Quarter - Production-Grade dApp
 * **Selected Problem Statement**: Prove liquidity for OTC block trades without exposing custody wallets or total capital.
-* **CI/CD Automation**: Configured GitHub Actions workflow ([`.github/workflows/ci.yaml`](.github/workflows/ci.yaml)) executing dependency installation, contract compilation, and automated test suites with passing runs.
+* **Formal Project Proposal ([`PROPOSAL.md`](PROPOSAL.md))**: Delivered comprehensive proposal addressing all 4 hackathon questions (Problem & Users, Public vs Private Data Model, Why Midnight Specifically, and Mainnet Scope Feasibility by Level 6).
+* **CI/CD Automated Test Suite**: Configured GitHub Actions workflow ([`.github/workflows/ci.yaml`](.github/workflows/ci.yaml)) running Compact contract compilation, automated 6-circuit test suite (`npm test`) validating circuits, state transitions, and nullifiers via `@midnight-ntwrk/compact-runtime`, and building the frontend workspace with green status.
 * **Privacy Model Documentation**: Formalized complete specification detailing public vs private ledger boundaries.
 
 ### Level 4: Waxing Gibbous - MVP and Contract Logic
