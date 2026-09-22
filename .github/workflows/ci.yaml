@@ -28,7 +28,9 @@ jobs:
         run: npm install
 
       - name: Compile Compact Contract
-        run: npm run compile
+        run: |
+          npm run compile
+          node scripts/patch-runtime.cjs
 
       - name: Run Contract Test Suite
         run: npm test
