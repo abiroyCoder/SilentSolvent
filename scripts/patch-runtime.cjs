@@ -27,10 +27,7 @@ for (const p of circuitContextPaths) {
       /const coerceToChargedState = \(contractState\) => \{[\s\S]*?return state;\s*\};/,
       `const coerceToChargedState = (contractState) => {
     let state;
-    if (contractState && contractState.data) {
-        state = contractState.data;
-    }
-    else if (contractState instanceof ocrt.ChargedState) {
+    if (contractState instanceof ocrt.ChargedState) {
         state = contractState;
     }
     else if (contractState instanceof ocrt.ContractState) {
@@ -38,6 +35,9 @@ for (const p of circuitContextPaths) {
     }
     else if (contractState instanceof ocrt.StateValue) {
         state = new ocrt.ChargedState(contractState);
+    }
+    else if (contractState && typeof contractState === 'object' && contractState.data) {
+        state = contractState.data;
     }
     else {
         try {
