@@ -25,9 +25,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Midnight specific
-# IMPORTANT: We DO NOT ignore frontend/src/managed/ or frontend/public/managed/ 
-# because they are required for CI/CD deployments where the compiler is not available.
-contracts/managed/
+# Track contracts/managed and frontend managed artifacts for CI and reviewers
 leveldb/
 midnight-level-db/
 
