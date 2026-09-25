@@ -52,27 +52,178 @@ export function createPatchedPublicDataProvider(queryUrl: string, subscriptionUr
   };
 }
 
-export function createPrivateStateProvider() {
+function serializeState(val: unknown): string {
+  return JSON.stringify(val, (_key, value) => {
+    if (value instanceof Uint8Array) {
+      return { __type: 'Uint8Array', hex: toHex(value) };
+    }
+    if (typeof value === 'bigint') {
+      return { __type: 'bigint', value: value.toString() };
+    }
+    return value;
+  });
+}
+
+function deserializeState(json: string): unknown {
+  try {
+    return JSON.parse(json, (_key, value) => {
+      if (value && typeof value === 'object') {
+        if (value.__type === 'Uint8Array' && typeof value.hex === 'string') {
+          return fromHex(value.hex);
+        }
+        if (value.__type === 'bigint' && typeof value.value === 'string') {
+          return BigInt(value.value);
+        }
+      }
+      return value;
+    });
+  } catch {
+    return null;
+  }
+}
+
+export function createPersistentPrivateStateProvider(storagePrefix = 'silentsolvent_pstate_') {
   let scope = '';
   const stateStore = new Map<string, unknown>();
   const signingKeyStore = new Map<string, unknown>();
-  const key = (id: string) => `${scope}:${id}`;
+  const key = (id: string) => `${storagePrefix}${scope}:${id}`;
+  const sigKey = (addr: string) => `${storagePrefix}sig:${addr}`;
+
+  // Hydrate from localStorage if in browser environment
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith(storagePrefix)) continue;
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        const val = deserializeState(raw);
+        if (k.startsWith(`${storagePrefix}sig:`)) {
+          const addr = k.slice(`${storagePrefix}sig:`.length);
+          signingKeyStore.set(addr, val);
+        } else {
+          const id = k.slice(storagePrefix.length);
+          stateStore.set(id, val);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to hydrate private state from storage:', e);
+    }
+  }
+
   return {
     setContractAddress(address: string) { scope = address; },
-    async set(id: string, state: unknown) { stateStore.set(key(id), state); },
-    async get(id: string) { return stateStore.get(key(id)) ?? null; },
-    async remove(id: string) { stateStore.delete(key(id)); },
-    async clear() { stateStore.clear(); },
-    async setSigningKey(addr: string, k: unknown) { signingKeyStore.set(addr, k); },
-    async getSigningKey(addr: string) { return signingKeyStore.get(addr) ?? null; },
-    async removeSigningKey(addr: string) { signingKeyStore.delete(addr); },
-    async clearSigningKeys() { signingKeyStore.clear(); },
-    async exportPrivateStates(): Promise<never> { throw new Error('Not implemented'); },
-    async importPrivateStates(): Promise<never> { throw new Error('Not implemented'); },
-    async exportSigningKeys(): Promise<never> { throw new Error('Not implemented'); },
-    async importSigningKeys(): Promise<never> { throw new Error('Not implemented'); },
+    async set(id: string, state: unknown) {
+      const scopedKey = key(id);
+      stateStore.set(`${scope}:${id}`, state);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem(scopedKey, serializeState(state));
+        } catch (e) {
+          console.warn('Failed to persist private state to localStorage:', e);
+        }
+      }
+    },
+    async get(id: string) {
+      const inMem = stateStore.get(`${scope}:${id}`);
+      if (inMem !== undefined) return inMem;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw = localStorage.getItem(key(id));
+        if (raw) {
+          const val = deserializeState(raw);
+          stateStore.set(`${scope}:${id}`, val);
+          return val;
+        }
+      }
+      return null;
+    },
+    async remove(id: string) {
+      stateStore.delete(`${scope}:${id}`);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem(key(id));
+      }
+    },
+    async clear() {
+      stateStore.clear();
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const toDelete: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(storagePrefix) && !k.startsWith(`${storagePrefix}sig:`)) {
+            toDelete.push(k);
+          }
+        }
+        toDelete.forEach((k) => localStorage.removeItem(k));
+      }
+    },
+    async setSigningKey(addr: string, k: unknown) {
+      signingKeyStore.set(addr, k);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(sigKey(addr), serializeState(k));
+      }
+    },
+    async getSigningKey(addr: string) {
+      const inMem = signingKeyStore.get(addr);
+      if (inMem !== undefined) return inMem;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw = localStorage.getItem(sigKey(addr));
+        if (raw) {
+          const val = deserializeState(raw);
+          signingKeyStore.set(addr, val);
+          return val;
+        }
+      }
+      return null;
+    },
+    async removeSigningKey(addr: string) {
+      signingKeyStore.delete(addr);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem(sigKey(addr));
+      }
+    },
+    async clearSigningKeys() {
+      signingKeyStore.clear();
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const toDelete: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(`${storagePrefix}sig:`)) {
+            toDelete.push(k);
+          }
+        }
+        toDelete.forEach((k) => localStorage.removeItem(k));
+      }
+    },
+    async exportPrivateStates(): Promise<Record<string, unknown>> {
+      const result: Record<string, unknown> = {};
+      stateStore.forEach((v, k) => { result[k] = v; });
+      return result;
+    },
+    async importPrivateStates(states: Record<string, unknown>): Promise<void> {
+      for (const [k, v] of Object.entries(states)) {
+        stateStore.set(k, v);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(`${storagePrefix}${k}`, serializeState(v));
+        }
+      }
+    },
+    async exportSigningKeys(): Promise<Record<string, unknown>> {
+      const result: Record<string, unknown> = {};
+      signingKeyStore.forEach((v, k) => { result[k] = v; });
+      return result;
+    },
+    async importSigningKeys(keys: Record<string, unknown>): Promise<void> {
+      for (const [k, v] of Object.entries(keys)) {
+        signingKeyStore.set(k, v);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(sigKey(k), serializeState(v));
+        }
+      }
+    },
   };
 }
+
+export const createPrivateStateProvider = createPersistentPrivateStateProvider;
 
 export interface ConnectedSession {
   api: any;
