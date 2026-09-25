@@ -170,4 +170,4 @@ SilentSolvent follows a phased delivery architecture designed for complete Mainn
 | **Source Code Repository** | [https://github.com/abiroyCoder/SilentSolvent](https://github.com/abiroyCoder/SilentSolvent) |
 | **CI/CD Pipeline** | [GitHub Actions Workflow](https://github.com/abiroyCoder/SilentSolvent/actions) |
 | **Demonstration Video** | [Watch Walkthrough on Google Drive](https://drive.google.com/file/d/15s4wkaOlXco3ur7x6DqAvf2jk8FsmTNR/view?usp=sharing) |
-| **Official Announcement** | [Launch Post on X](https://x.com/Abiroywb/status/2100219913646555268?s=20) |
+| **Official Announcement** | [Launch Post on X](https://x.com/silentsolvent) |
