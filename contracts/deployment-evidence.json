@@ -1,0 +1,68 @@
+{
+  "protocol": "SilentSolvent",
+  "version": "1.0.0",
+  "network": "preprod",
+  "networkId": "preprod",
+  "contractName": "SilentSolventContract",
+  "contractAddress": "79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268",
+  "contractAddressHex": "0x79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268",
+  "deploymentTransaction": {
+    "hash": "efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800",
+    "network": "preprod",
+    "explorerUrl": "https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod"
+  },
+  "latestAttestationTransaction": {
+    "hash": "4b854bd06cd4d94012744bb619baf69c9442b1fe3030c49d2b5fcfbe3db5cc8f",
+    "blockHeight": 2575317,
+    "blockTimestamp": 1789564560000,
+    "explorerUrl": "https://explorer.1am.xyz/tx/4b854bd06cd4d94012744bb619baf69c9442b1fe3030c49d2b5fcfbe3db5cc8f?network=preprod"
+  },
+  "onChainParameters": {
+    "minSolvencyThresholdCents": "5000000",
+    "minSolvencyThresholdUSD": "$50,000.00",
+    "tradeSessionId": "1febba79c6e8a3b2cb9ff96ec9dcf1becb7ab688d884b25b1c1ce9dd5c02443a",
+    "maxAttestations": 50,
+    "totalAttestationsRecorded": 2,
+    "isActive": true
+  },
+  "onChainNullifiers": [
+    "9a7fae02ba8b44e36af30bf678d719e7cdb885127da9577aa65362e8ddf2e12c",
+    "6fd8c2993e56d339efd2f82e75e7e9a80e51aa5e977b6cb6013f7580d2d4a068"
+  ],
+  "indexerEndpoint": "https://indexer.preprod.midnight.network/api/v4/graphql",
+  "explorerUrl": "https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod",
+  "circuits": [
+    {
+      "name": "verify_solvency",
+      "type": "impure",
+      "zkProofSystem": "Midnight Compact Kachina (BN254)",
+      "privacyGuarantees": "Liquid balance & firm secret key evaluated as private witness; nullifier registered; balance hidden."
+    },
+    {
+      "name": "update_session",
+      "type": "impure",
+      "privacyGuarantees": "Guarded by persistentHash admin commitment."
+    },
+    {
+      "name": "pause_session",
+      "type": "impure",
+      "privacyGuarantees": "Guarded by persistentHash admin commitment."
+    },
+    {
+      "name": "resume_session",
+      "type": "impure",
+      "privacyGuarantees": "Guarded by persistentHash admin commitment."
+    },
+    {
+      "name": "admin_public_key",
+      "type": "pure",
+      "hashFunction": "persistentHash<Vector<2, Bytes<32>>>"
+    },
+    {
+      "name": "make_nullifier",
+      "type": "pure",
+      "hashFunction": "persistentHash<Vector<3, Bytes<32>>>"
+    }
+  ],
+  "verificationStatus": "CONFIRMED_ON_CHAIN"
+}
