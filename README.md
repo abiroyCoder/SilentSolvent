@@ -8,7 +8,7 @@ A zero-knowledge pre-trade liquidity attestation dApp on [Midnight Network](http
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white)](https://silentsolvent.netlify.app/)
 [![Preprod Contract](https://img.shields.io/badge/Preprod_Contract-79f209...6eb13268-7B2BF9?style=for-the-badge&logo=midnight)](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)
-[![X Post](https://img.shields.io/badge/X-Launch_Post-black?logo=x)](https://x.com/Abiroywb/status/2100219913646555268?s=20)
+[![X Post](https://img.shields.io/badge/X-Launch_Post-black?logo=x)](https://x.com/silentsolvent)
 [![CI](https://github.com/abiroyCoder/SilentSolvent/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/abiroyCoder/SilentSolvent/actions/workflows/ci.yaml)
 [![license](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
 
@@ -22,6 +22,8 @@ A zero-knowledge pre-trade liquidity attestation dApp on [Midnight Network](http
 > * **📄 Dedicated Architecture Proposal**: **[`PROPOSAL.md`](PROPOSAL.md)** (Covers Users, Kachina Data Model, Why Midnight, Mainnet Feasibility by Level 6)
 > * **🔍 1AM Block Explorer**: **[View Contract on 1AM Preprod Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)**
 > * **🔗 Deployment Transaction**: [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod)
+> * **📜 On-Chain Deployment Evidence**: **[`contracts/deployment-evidence.json`](contracts/deployment-evidence.json)**
+> * **🔄 Automated Deployment / CD Workflow**: **[`.github/workflows/deploy.yaml`](.github/workflows/deploy.yaml)**
 
 ---
 
@@ -93,16 +95,19 @@ The broker deploys a session with a minimum threshold on the Midnight Network. T
 | Requirement | Verification Method | Artifact / Resource Link |
 | :--- | :--- | :--- |
 | **Contract Address (Preprod)** | On-Chain Verification | **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)** ([1AM Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)) |
+| **Deployment Evidence** | Verified On-Chain Telemetry | [`contracts/deployment-evidence.json`](contracts/deployment-evidence.json) |
 | **Live Demo dApp (Level 2 Deliverable)** | Web Browser Access | **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)** |
 | **Project Proposal (Level 3 Deliverable)** | Architecture & Scope Review | **[`PROPOSAL.md`](PROPOSAL.md)** (Answers all 4 questions) |
 | **Compact Smart Contract** | Review logic and circuits | [`contracts/silentsolvent.compact`](contracts/silentsolvent.compact) |
 | **Circuits and Keys** | Inspect generated artifacts | [`contracts/managed/silentsolvent/`](contracts/managed/silentsolvent/) |
-| **Automated Test Suite** | Execute `npm run test` | Passing 6-circuit tests via `@midnight-ntwrk/compact-runtime` |
-| **CI/CD Pipeline** | GitHub Actions | [Workflow File](.github/workflows/ci.yaml) and [Passing Action Runs](https://github.com/abiroyCoder/SilentSolvent/actions) |
-| **Wallet Integration** | Launch UI | Connect 1AM wallet in frontend |
+| **Automated Test Suite** | Execute `npm run test` | Passing 11-test suite (6 circuits + 5-stage Frontend E2E) |
+| **CI/CD Pipeline** | GitHub Actions | [CI Workflow](.github/workflows/ci.yaml) & [CD Deploy Workflow](.github/workflows/deploy.yaml) |
+| **Wallet Integration** | Launch UI | Official DApp Connector API (`@midnight-ntwrk/dapp-connector-api`) |
+| **Authenticated Balance Source** | Review UI & witness source | Midnight Native Indexer Proof + Institutional PoR Oracle |
+| **Persistent Firm Credential** | Review identity system | Persistent cryptographic commitment + One-attestation Sybil protection |
 | **Privacy Model Documentation** | Review specification | [Privacy Model Section](#privacy-model-what-an-observer-learns) |
 | **Video Demonstration** | Watch walkthrough | [Google Drive Demo Video](https://drive.google.com/file/d/15s4wkaOlXco3ur7x6DqAvf2jk8FsmTNR/view?usp=sharing) |
-| **Public Announcement** | Verified post on X | [Launch Post on X](https://x.com/Abiroywb/status/2100219913646555268?s=20) |
+| **Public Announcement** | Verified post on X | [Launch Post on X](https://x.com/silentsolvent) |
 
 ---
 
@@ -161,22 +166,30 @@ Zero-knowledge proofs are generated locally by the fund. An observer or broker *
 ### Level 2: Waxing Crescent - Frontend Integration
 * **Live Demo dApp URL (Mandatory Deliverable)**: Production frontend application hosted and accessible live at **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)**.
 * **Deployed Preprod Contract Address (Mandatory Deliverable)**: Connected and live-synchronized with verified Midnight Preprod contract **[`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)**.
-* **Browser Wallet Integration**: Integrated the 1AM browser wallet via `@midnight-ntwrk/dapp-connector-api` with network and status detection. 
+* **Official DApp Connector API Integration**: Integrated browser wallet connection explicitly via `@midnight-ntwrk/dapp-connector-api` supporting 1AM, Lace, and standard Midnight wallets with network detection and status polling.
 * **Client-Side Proving**: The React frontend interfaces with the deployed contract to coordinate local ZK proof generation via the wallet's proving provider and submit transactions.
 * **Observable Privacy Behavior**: When evaluating threshold predicates, exact capital amounts remain entirely within client memory. Only the cryptographic proof reaches the ledger.
 
-### Level 3: First Quarter - Production-Grade dApp
+### Level 3: First Quarter - Production-Grade dApp & Pipeline Hardening
 * **Selected Problem Statement**: Prove liquidity for OTC block trades without exposing custody wallets or total capital.
 * **Formal Project Proposal ([`PROPOSAL.md`](PROPOSAL.md))**: Delivered comprehensive proposal addressing all 4 hackathon questions (Problem & Users, Public vs Private Data Model, Why Midnight Specifically, and Mainnet Scope Feasibility by Level 6).
-* **CI/CD Automated Test Suite**: Configured GitHub Actions workflow ([`.github/workflows/ci.yaml`](.github/workflows/ci.yaml)) running Compact contract compilation, automated 6-circuit test suite (`npm test`) validating circuits, state transitions, and nullifiers via `@midnight-ntwrk/compact-runtime`, and building the frontend workspace with green status.
-* **Privacy Model Documentation**: Formalized complete specification detailing public vs private ledger boundaries.
+* **Authenticated Balance Source**: Replaced manual text input with a verified balance provider:
+  - **Midnight-Native On-Chain Balance**: Direct indexer-authenticated UTXO balance query for the connected wallet.
+  - **Institutional Proof-of-Reserve (PoR) Oracle**: Cryptographically signed custodian attestations (Fireblocks Prime, Coinbase Prime, Copper ClearLoop) with digital signature validation and expiration checks.
+* **Production Integrity & Strict Submission**: Removed fake transaction fallback. Transactions strictly require real wallet connection, proving, and on-chain submission.
+* **Persistent Cryptographic Firm Credentials**: Institutional identity seeds are stored in persistent client storage with public commitment derivation (`persistentHash`) and identity management.
+* **Genuine One-Attestation-Per-Credential Semantics**: Frontend evaluates session nullifiers against on-chain ledger state (`nullifiers` and `attestation_log`), preventing duplicate attestations while guarding against Sybil attacks.
+* **Persistent Private State & Admin Key Storage**: Private state provider and admin credentials persist across page reloads via local storage synchronization, featuring on-chain admin authorization verification.
+* **Real Indexed Explorer**: Explorer displays actual on-chain nullifier records and real indexer transaction telemetry instead of synthetic array iterations.
+* **Full Automated Test Suite (11 Tests)**: 6 smart contract circuit tests + 5-stage Frontend E2E pipeline (`wallet → witness → proof → transaction → Preprod confirmation → indexer state change`).
+* **Deployment Evidence & CD Workflow**: Documented full on-chain deployment evidence ([`contracts/deployment-evidence.json`](contracts/deployment-evidence.json)) and automated deployment workflow ([`.github/workflows/deploy.yaml`](.github/workflows/deploy.yaml)).
 
 ### Level 4: Waxing Gibbous - MVP and Contract Logic
 * **Production Contract Circuits**:
   - **Session Management**: Config circuits (`update_session`, `pause_session`) with admin authentication.
   - **Time-based expiration**: Attestations fail after the `session_deadline` using `blockTimeLt()`.
   - **Solvency Verification**: Multi-predicate gate validating liquidity threshold and anti-double-attestation in a single zero-knowledge proof.
-* **Public Social Presence**: Official announcement and demonstration thread published on X: [Launch Post on X](https://x.com/Abiroywb/status/2100219913646555268?s=20).
+* **Public Social Presence**: Official announcement and demonstration thread published on X: [Launch Post on X](https://x.com/silentsolvent).
 
 ---
 
@@ -247,7 +260,7 @@ silentsolvent/
 * **🚀 [Live Web dApp (Netlify)](https://silentsolvent.netlify.app/)**
 * **⚡ [Deployed Contract on 1AM Preprod Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)**: `79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`
 * **📺 [Watch SilentSolvent Walkthrough on Google Drive](https://drive.google.com/file/d/15s4wkaOlXco3ur7x6DqAvf2jk8FsmTNR/view?usp=sharing)**
-* **🐦 [Official Announcement on X](https://x.com/Abiroywb/status/2100219913646555268?s=20)**
+* **🐦 [Official Announcement on X](https://x.com/silentsolvent)**
 
 ---
 
