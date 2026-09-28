@@ -3,7 +3,7 @@ async function waitForDust() {
   let attempts = 0;
   while (attempts < 120) {
     try {
-      const response = await fetch('http://127.0.0.1:8088/api/v4/graphql', {
+      const response = await fetch('http://127.0.0.1:8088/api/v3/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: 'query { blocks(limit: 1) { height } }' })
