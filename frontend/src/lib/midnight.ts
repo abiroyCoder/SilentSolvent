@@ -4,38 +4,69 @@ import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-p
 import { ContractState } from '@midnight-ntwrk/compact-runtime';
 import type { MidnightProvider, WalletProvider } from '@midnight-ntwrk/midnight-js-types';
 
-export function toHex(bytes: Uint8Array | null | undefined): string {
+/** Hex encoding used at every wallet/indexer boundary. */
+export function toHex(bytes: Uint8Array | string | null | undefined): string {
   if (!bytes) return '';
-  if (typeof bytes === 'string') return bytes;
-  try {
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  } catch {
-    return '';
-  }
+  if (typeof bytes === 'string') return bytes.replace(/^0x/i, '').toLowerCase();
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function fromHex(hex: string): Uint8Array {
-  const normalized = hex.startsWith('0x') ? hex.slice(2) : hex;
-  if (normalized.length % 2 !== 0) throw new Error('Invalid hex string');
+  const normalized = hex.replace(/^0x/i, '');
+  if (!/^[0-9a-fA-F]*$/.test(normalized) || normalized.length % 2 !== 0) {
+    throw new Error('Expected an even-length hexadecimal string.');
+  }
   const bytes = new Uint8Array(normalized.length / 2);
   for (let i = 0; i < normalized.length; i += 2) {
-    bytes[i / 2] = parseInt(normalized.slice(i, i + 2), 16);
+    bytes[i / 2] = Number.parseInt(normalized.slice(i, i + 2), 16);
   }
   return bytes;
 }
 
+/**
+ * Remove keys written by pre-prototype builds. New private state and all
+ * operator secrets are deliberately memory-only; this is a one-time migration
+ * for browsers that ran an older build.
+ */
+export function purgeLegacySecretStorage(): void {
+  if (typeof window === 'undefined') return;
+  const legacyExact = new Set([
+    'silentsolvent_firm_credential_v1',
+    'silentsolvent_admin_sk',
+  ]);
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (
+        key &&
+        (legacyExact.has(key) ||
+          key.startsWith('silentsolvent_admin_sk_') ||
+          key.startsWith('silentsolvent_pstate_'))
+      ) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    // Storage may be blocked. Secrets are never written by this build.
+  }
+}
+
 export function createPatchedPublicDataProvider(queryUrl: string, subscriptionUrl: string) {
-  const base = indexerPublicDataProvider(queryUrl, subscriptionUrl);
+  const base = indexerPublicDataProvider(queryUrl, subscriptionUrl) as any;
 
   async function queryLatest(query: string, address: string) {
-    const res = await fetch(queryUrl, {
+    const response = await fetch(queryUrl, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ query, variables: { address } }),
     });
-    if (!res.ok) throw new Error(`Indexer HTTP ${res.status}`);
-    const payload = await res.json();
-    if (payload.errors?.length) throw new Error(payload.errors.map((e: any) => e.message).join('; '));
+    if (!response.ok) throw new Error(`Indexer HTTP ${response.status}`);
+    const payload = await response.json();
+    if (payload.errors?.length) {
+      throw new Error(payload.errors.map((error: any) => error.message).join('; '));
+    }
     return payload.data?.contractAction ?? null;
   }
 
@@ -44,186 +75,64 @@ export function createPatchedPublicDataProvider(queryUrl: string, subscriptionUr
     async queryContractState(contractAddress: string, config?: any) {
       if (config) return base.queryContractState(contractAddress, config);
       const action = await queryLatest(
-        `query LATEST($address: HexEncoded!) { contractAction(address: $address) { state } }`,
+        `query LATEST_CONTRACT_STATE($address: HexEncoded!) { contractAction(address: $address) { state } }`,
         contractAddress,
       );
-      return action ? ContractState.deserialize(fromHex(action.state)) : null;
+      return action?.state ? ContractState.deserialize(fromHex(action.state)) : null;
     },
   };
 }
 
-function serializeState(val: unknown): string {
-  return JSON.stringify(val, (_key, value) => {
-    if (value instanceof Uint8Array) {
-      return { __type: 'Uint8Array', hex: toHex(value) };
-    }
-    if (typeof value === 'bigint') {
-      return { __type: 'bigint', value: value.toString() };
-    }
-    return value;
-  });
-}
-
-function deserializeState(json: string): unknown {
-  try {
-    return JSON.parse(json, (_key, value) => {
-      if (value && typeof value === 'object') {
-        if (value.__type === 'Uint8Array' && typeof value.hex === 'string') {
-          return fromHex(value.hex);
-        }
-        if (value.__type === 'bigint' && typeof value.value === 'string') {
-          return BigInt(value.value);
-        }
-      }
-      return value;
-    });
-  } catch {
-    return null;
-  }
-}
-
-export function createPersistentPrivateStateProvider(storagePrefix = 'silentsolvent_pstate_') {
+/** No persistence, export, or backup path exists for private state. */
+export function createPrivateStateProvider() {
   let scope = '';
   const stateStore = new Map<string, unknown>();
   const signingKeyStore = new Map<string, unknown>();
-  const key = (id: string) => `${storagePrefix}${scope}:${id}`;
-  const sigKey = (addr: string) => `${storagePrefix}sig:${addr}`;
-
-  // Hydrate from localStorage if in browser environment
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k || !k.startsWith(storagePrefix)) continue;
-        const raw = localStorage.getItem(k);
-        if (!raw) continue;
-        const val = deserializeState(raw);
-        if (k.startsWith(`${storagePrefix}sig:`)) {
-          const addr = k.slice(`${storagePrefix}sig:`.length);
-          signingKeyStore.set(addr, val);
-        } else {
-          const id = k.slice(storagePrefix.length);
-          stateStore.set(id, val);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to hydrate private state from storage:', e);
-    }
-  }
+  const scoped = (id: string) => `${scope}:${id}`;
 
   return {
-    setContractAddress(address: string) { scope = address; },
+    setContractAddress(address: string) {
+      scope = address;
+    },
     async set(id: string, state: unknown) {
-      const scopedKey = key(id);
-      stateStore.set(`${scope}:${id}`, state);
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          localStorage.setItem(scopedKey, serializeState(state));
-        } catch (e) {
-          console.warn('Failed to persist private state to localStorage:', e);
-        }
-      }
+      stateStore.set(scoped(id), state);
     },
     async get(id: string) {
-      const inMem = stateStore.get(`${scope}:${id}`);
-      if (inMem !== undefined) return inMem;
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const raw = localStorage.getItem(key(id));
-        if (raw) {
-          const val = deserializeState(raw);
-          stateStore.set(`${scope}:${id}`, val);
-          return val;
-        }
-      }
-      return null;
+      return stateStore.get(scoped(id)) ?? null;
     },
     async remove(id: string) {
-      stateStore.delete(`${scope}:${id}`);
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.removeItem(key(id));
-      }
+      stateStore.delete(scoped(id));
     },
     async clear() {
       stateStore.clear();
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const toDelete: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith(storagePrefix) && !k.startsWith(`${storagePrefix}sig:`)) {
-            toDelete.push(k);
-          }
-        }
-        toDelete.forEach((k) => localStorage.removeItem(k));
-      }
+      signingKeyStore.clear();
     },
-    async setSigningKey(addr: string, k: unknown) {
-      signingKeyStore.set(addr, k);
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem(sigKey(addr), serializeState(k));
-      }
+    async setSigningKey(address: string, key: unknown) {
+      signingKeyStore.set(address, key);
     },
-    async getSigningKey(addr: string) {
-      const inMem = signingKeyStore.get(addr);
-      if (inMem !== undefined) return inMem;
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const raw = localStorage.getItem(sigKey(addr));
-        if (raw) {
-          const val = deserializeState(raw);
-          signingKeyStore.set(addr, val);
-          return val;
-        }
-      }
-      return null;
+    async getSigningKey(address: string) {
+      return signingKeyStore.get(address) ?? null;
     },
-    async removeSigningKey(addr: string) {
-      signingKeyStore.delete(addr);
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.removeItem(sigKey(addr));
-      }
+    async removeSigningKey(address: string) {
+      signingKeyStore.delete(address);
     },
     async clearSigningKeys() {
       signingKeyStore.clear();
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const toDelete: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith(`${storagePrefix}sig:`)) {
-            toDelete.push(k);
-          }
-        }
-        toDelete.forEach((k) => localStorage.removeItem(k));
-      }
     },
-    async exportPrivateStates(): Promise<Record<string, unknown>> {
-      const result: Record<string, unknown> = {};
-      stateStore.forEach((v, k) => { result[k] = v; });
-      return result;
+    async exportPrivateStates(): Promise<never> {
+      throw new Error('Private state export is disabled in this prototype.');
     },
-    async importPrivateStates(states: Record<string, unknown>): Promise<void> {
-      for (const [k, v] of Object.entries(states)) {
-        stateStore.set(k, v);
-        if (typeof window !== 'undefined' && window.localStorage) {
-          localStorage.setItem(`${storagePrefix}${k}`, serializeState(v));
-        }
-      }
+    async importPrivateStates(): Promise<never> {
+      throw new Error('Private state import is disabled in this prototype.');
     },
-    async exportSigningKeys(): Promise<Record<string, unknown>> {
-      const result: Record<string, unknown> = {};
-      signingKeyStore.forEach((v, k) => { result[k] = v; });
-      return result;
+    async exportSigningKeys(): Promise<never> {
+      throw new Error('Signing-key export is disabled in this prototype.');
     },
-    async importSigningKeys(keys: Record<string, unknown>): Promise<void> {
-      for (const [k, v] of Object.entries(keys)) {
-        signingKeyStore.set(k, v);
-        if (typeof window !== 'undefined' && window.localStorage) {
-          localStorage.setItem(sigKey(k), serializeState(v));
-        }
-      }
+    async importSigningKeys(): Promise<never> {
+      throw new Error('Signing-key import is disabled in this prototype.');
     },
   };
 }
-
-export const createPrivateStateProvider = createPersistentPrivateStateProvider;
 
 export interface ConnectedSession {
   api: any;
@@ -232,32 +141,38 @@ export interface ConnectedSession {
   shieldedAddress: any;
   providers: {
     privateStateProvider: ReturnType<typeof createPrivateStateProvider>;
-    publicDataProvider: ReturnType<typeof createPatchedPublicDataProvider>;
+    publicDataProvider: any;
     zkConfigProvider: FetchZkConfigProvider;
-    proofProvider: { proveTx: (unprovenTx: any, _config: any) => Promise<any> };
+    proofProvider: { proveTx: (unprovenTx: any, _config?: any) => Promise<any> };
     walletProvider: WalletProvider;
     midnightProvider: MidnightProvider;
   };
 }
 
+export function assertPreprodNetwork(config: any): void {
+  const network = String(config?.networkId ?? '').toLowerCase();
+  if (!network.includes('preprod')) {
+    throw new Error(`This prototype only permits Midnight Preprod; wallet reported "${config?.networkId ?? 'unknown'}".`);
+  }
+}
+
 export async function createConnectedSession(api: any): Promise<ConnectedSession> {
-  const [config, unshieldedAddr, shieldedAddress] = await Promise.all([
+  const [config, unshieldedAddress, shieldedAddress] = await Promise.all([
     api.getConfiguration(),
     api.getUnshieldedAddress(),
     api.getShieldedAddresses(),
   ]);
 
+  assertPreprodNetwork(config);
   setNetworkId(config.networkId);
 
   const zkConfigProvider = new FetchZkConfigProvider(
     new URL('/managed', window.location.origin).toString(),
     window.fetch.bind(window),
   );
-
   const provingProvider = await api.getProvingProvider(zkConfigProvider);
-
   const proofProvider = {
-    async proveTx(unprovenTx: any, _config: any) {
+    async proveTx(unprovenTx: any, _config?: any) {
       let CostModelClass: any;
       try {
         const protocolLedger = await import('@midnight-ntwrk/midnight-js-protocol/ledger');
@@ -274,9 +189,8 @@ export async function createConnectedSession(api: any): Promise<ConnectedSession
     getCoinPublicKey: () => shieldedAddress.shieldedCoinPublicKey,
     getEncryptionPublicKey: () => shieldedAddress.shieldedEncryptionPublicKey,
     balanceTx: async (tx: any) => {
-      const txHex = toHex(tx.serialize());
-      const balanced = await api.balanceUnsealedTransaction(txHex);
-      if (!balanced?.tx) throw new Error('balanceUnsealedTransaction failed');
+      const balanced = await api.balanceUnsealedTransaction(toHex(tx.serialize()));
+      if (!balanced?.tx) throw new Error('Wallet did not return a balanced transaction.');
       let TransactionClass: any;
       try {
         const protocolLedger = await import('@midnight-ntwrk/midnight-js-protocol/ledger');
@@ -291,29 +205,37 @@ export async function createConnectedSession(api: any): Promise<ConnectedSession
 
   const midnightProvider: MidnightProvider = {
     submitTx: async (tx: any) => {
-      const txHex = toHex(tx.serialize());
-      const result = await api.submitTransaction(txHex);
-      if (typeof result === 'string' && result) return result;
+      const result = await api.submitTransaction(toHex(tx.serialize()));
+      if (typeof result === 'string' && result.length > 0) return result;
       if (result?.transactionId) return result.transactionId;
       if (result?.id) return result.id;
-      return txHex.slice(0, 64);
+
+      // Some wallet versions return void. The identifiers belong to the real
+      // balanced transaction; never manufacture a hash from serialized bytes.
+      const identifiers = typeof tx.identifiers === 'function' ? tx.identifiers() : [];
+      if (!Array.isArray(identifiers) || identifiers.length === 0 || !identifiers[0]) {
+        throw new Error('Wallet returned no transaction id and the SDK transaction exposed no identifiers.');
+      }
+      return identifiers[0];
     },
   };
 
   const publicDataProvider = config?.indexerUri && config?.indexerWsUri
     ? createPatchedPublicDataProvider(config.indexerUri, config.indexerWsUri)
-    : (api.getPublicDataProvider ? await api.getPublicDataProvider() : null);
+    : await api.getPublicDataProvider?.();
+  if (!publicDataProvider) throw new Error('Wallet did not provide an indexer data provider.');
 
-  const unshieldedAddressStr = typeof unshieldedAddr === 'string'
-    ? unshieldedAddr
-    : unshieldedAddr?.unshieldedAddress || '';
+  const unshielded = typeof unshieldedAddress === 'string'
+    ? unshieldedAddress
+    : unshieldedAddress?.unshieldedAddress || '';
 
   return {
-    api, config,
-    unshieldedAddress: unshieldedAddressStr,
+    api,
+    config,
+    unshieldedAddress: unshielded,
     shieldedAddress,
     providers: {
-      privateStateProvider: (window as any).privateStateProvider ?? createPrivateStateProvider(),
+      privateStateProvider: createPrivateStateProvider(),
       publicDataProvider,
       zkConfigProvider,
       proofProvider,
@@ -324,15 +246,52 @@ export async function createConnectedSession(api: any): Promise<ConnectedSession
 }
 
 export async function waitForContractDeployment(
-  publicDataProvider: ReturnType<typeof createPatchedPublicDataProvider>,
+  publicDataProvider: any,
   contractAddress: string,
   pollIntervalMs = 2000,
   maxAttempts = 45,
 ): Promise<void> {
-  for (let i = 0; i < maxAttempts; i++) {
+  for (let i = 0; i < maxAttempts; i += 1) {
     const state = await publicDataProvider.queryContractState(contractAddress);
     if (state?.data) return;
-    await new Promise((r) => setTimeout(r, pollIntervalMs));
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
   }
-  throw new Error(`Contract not indexed after ${maxAttempts * pollIntervalMs}ms`);
+  throw new Error(`Contract was not indexed after ${maxAttempts * pollIntervalMs}ms.`);
+}
+
+/**
+ * Wait for both indexer transaction success and the exact expected ledger
+ * mutation. A wallet acknowledgement alone is never treated as confirmation.
+ */
+export async function waitForSuccessfulTransactionAndState(
+  publicDataProvider: any,
+  txId: string,
+  readState: () => Promise<any>,
+  statePredicate: (state: any) => boolean,
+  timeoutMs = 120_000,
+  pollIntervalMs = 2000,
+): Promise<any> {
+  if (!txId) throw new Error('Cannot confirm a transaction without an actual transaction id.');
+  if (typeof publicDataProvider.watchForTxData !== 'function') {
+    throw new Error('Indexer provider cannot confirm transaction finality.');
+  }
+
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Timed out waiting for indexer transaction confirmation.')), timeoutMs);
+  });
+  const finalized = await Promise.race([publicDataProvider.watchForTxData(txId), timeout]);
+  if (finalized?.status !== 'SucceedEntirely') {
+    throw new Error(`Indexer reported transaction status ${String(finalized?.status ?? 'unknown')}.`);
+  }
+  if (Array.isArray(finalized.identifiers) && !finalized.identifiers.includes(txId)) {
+    throw new Error('Indexer confirmation did not contain the submitted transaction identifier.');
+  }
+
+  const attempts = Math.max(1, Math.ceil(timeoutMs / pollIntervalMs));
+  for (let i = 0; i < attempts; i += 1) {
+    const state = await readState();
+    if (statePredicate(state)) return finalized;
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+  throw new Error('Transaction was indexed successfully, but the expected contract state change was not observed.');
 }

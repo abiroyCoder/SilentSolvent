@@ -1,6 +1,7 @@
 {
   "protocol": "SilentSolvent",
   "version": "1.0.0",
+  "recordStatus": "HISTORICAL_SUPERSEDED_CONTRACT",
   "network": "preprod",
   "networkId": "preprod",
   "contractName": "SilentSolventContract",
@@ -64,5 +65,6 @@
       "hashFunction": "persistentHash<Vector<3, Bytes<32>>>"
     }
   ],
-  "verificationStatus": "CONFIRMED_ON_CHAIN"
+  "verificationStatus": "HISTORICAL_CONFIRMED_ONLY",
+  "verificationScope": "This record confirms only the superseded witness-only deployment; it is not evidence for the current authenticated-attestation contract."
 }

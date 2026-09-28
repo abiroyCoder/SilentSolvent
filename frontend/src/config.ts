@@ -4,9 +4,13 @@ export const INDEXER_URL =
   import.meta.env.VITE_INDEXER_URL || 
   'https://indexer.preprod.midnight.network/api/v4/graphql';
 
-export const INDEXER_WS = 
-  import.meta.env.VITE_INDEXER_WS || 
+export const INDEXER_WS =
+  import.meta.env.VITE_INDEXER_WS ||
   'wss://indexer.preprod.midnight.network/api/v4/graphql/ws';
+
+// No default is intentional. A solvency proof cannot be generated until a
+// real custodian gateway is configured and returns a fresh signed snapshot.
+export const ATTESTATION_API_URL = String(import.meta.env.VITE_ATTESTATION_API_URL || '').replace(/\/$/, '');
 
 // Address of the deployed SilentSolvent contract
 // You can override this in localStorage for testing without rebuilding

@@ -1,11 +1,12 @@
 import '../polyfills';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { CompiledContract } from '@midnight-ntwrk/compact-js';
-import { deployContract, submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
-import { Contract, pureCircuits } from '../managed/contract/index.js';
+import { createUnprovenDeployTx, submitCallTx, submitTxAsync } from '@midnight-ntwrk/midnight-js-contracts';
+import { Contract, ledger, pureCircuits } from '../managed/contract/index.js';
+import { sampleSigningKey } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';
 import { useWallet } from '../contexts/WalletContext';
-import { getContractAddress, setContractAddress, getExplorerContractUrl } from '../config';
-import { fromHex, toHex } from '../lib/midnight';
+import { ATTESTATION_API_URL, getContractAddress, setContractAddress, getExplorerContractUrl } from '../config';
+import { fromHex, toHex, waitForSuccessfulTransactionAndState } from '../lib/midnight';
 import {
   Settings,
   Shield,
@@ -18,14 +19,22 @@ import {
   CheckCircle,
   AlertTriangle,
   Copy,
-  Download,
 } from 'lucide-react';
 import { useContractState } from '../hooks/useContractState';
 
+let inMemoryAdminSecret = '';
+
+function generateRandomHex(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 const defaultWitnesses = {
-  get_liquid_balance: (ctx: any) => [ctx.privateState, 0n],
-  get_firm_secret: (ctx: any) => [ctx.privateState, new Uint8Array(32)],
+  get_balance_attestation: () => { throw new Error('A signed attestation is required.'); },
+  get_firm_secret: () => { throw new Error('A firm secret is not available to admin circuits.'); },
   admin_secret: (ctx: any) => [ctx.privateState, new Uint8Array(32)],
+  getSchnorrReduction: () => { throw new Error('Schnorr reduction is not available to admin circuits.'); },
 };
 
 function getCompiledContract(customWitnesses?: Record<string, any>) {
@@ -38,11 +47,12 @@ function getCompiledContract(customWitnesses?: Record<string, any>) {
   ) as any;
 }
 
-const STORAGE_ADMIN_SK = 'silentsolvent_admin_sk';
-
 export default function AdminPage() {
   const { session, isConnected, connect } = useWallet();
-  const [adminSk, setAdminSk] = useState('');
+  const [adminSk, setAdminSk] = useState(() => {
+    if (!inMemoryAdminSecret) inMemoryAdminSecret = generateRandomHex();
+    return inMemoryAdminSecret;
+  });
   const [copiedKey, setCopiedKey] = useState(false);
 
   // Deploy State
@@ -55,39 +65,10 @@ export default function AdminPage() {
   const [activeContract, setActiveContract] = useState(getContractAddress());
   const { ledgerState, isLoading: isLoadingLedger, refetch } = useContractState(3000, activeContract);
 
-  const generateRandomHex = () =>
-    Array.from(crypto.getRandomValues(new Uint8Array(32)))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-
-  // Recover saved admin credential from secure storage on mount / contract change
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const contractSpecificKey = localStorage.getItem(`${STORAGE_ADMIN_SK}_${activeContract}`);
-    const globalKey = localStorage.getItem(STORAGE_ADMIN_SK);
-
-    if (contractSpecificKey && contractSpecificKey.length === 64) {
-      setAdminSk(contractSpecificKey);
-    } else if (globalKey && globalKey.length === 64) {
-      setAdminSk(globalKey);
-    } else {
-      const newSk = generateRandomHex();
-      setAdminSk(newSk);
-      localStorage.setItem(STORAGE_ADMIN_SK, newSk);
-      localStorage.setItem(`${STORAGE_ADMIN_SK}_${activeContract}`, newSk);
-    }
-  }, [activeContract]);
-
-  const handleUpdateAdminSk = useCallback(
-    (newKey: string) => {
-      setAdminSk(newKey);
-      if (typeof window !== 'undefined' && newKey.trim().length === 64) {
-        localStorage.setItem(STORAGE_ADMIN_SK, newKey.trim());
-        localStorage.setItem(`${STORAGE_ADMIN_SK}_${activeContract}`, newKey.trim());
-      }
-    },
-    [activeContract],
-  );
+  const handleUpdateAdminSk = useCallback((newKey: string) => {
+    setAdminSk(newKey);
+    if (newKey.trim().length === 64) inMemoryAdminSecret = newKey.trim().toLowerCase();
+  }, []);
 
   const handleGenerateNewKey = () => {
     const newSk = generateRandomHex();
@@ -100,24 +81,6 @@ export default function AdminPage() {
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
-  const handleExportKey = () => {
-    const payload = JSON.stringify(
-      {
-        contractAddress: activeContract,
-        adminSecretKey: adminSk,
-        exportedAt: new Date().toISOString(),
-      },
-      null,
-      2,
-    );
-    const blob = new Blob([payload], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `silentsolvent-admin-key-${activeContract.slice(0, 8)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   // Derive admin public key hash from loaded secret key
   let currentAdminHash = '';
@@ -136,35 +99,52 @@ export default function AdminPage() {
 
   const handleDeploy = async () => {
     if (!session) return setDeployStatus('Connect wallet first.');
+    if (!ATTESTATION_API_URL) return setDeployStatus('Configure VITE_ATTESTATION_API_URL before deploying.');
+    if (!/^[0-9a-fA-F]{64}$/.test(adminSk.trim())) return setDeployStatus('Admin secret must be exactly 32 bytes of hex.');
     setIsDeploying(true);
-    setDeployStatus('Deploying contract to Midnight network...');
+    setDeployStatus('Fetching the configured attestation provider identity...');
 
     try {
+      const providerResponse = await fetch(`${ATTESTATION_API_URL}/provider-info`, { cache: 'no-store' });
+      const providerInfo = await providerResponse.json();
+      if (!providerResponse.ok || !providerInfo.publicKey || !providerInfo.assetId || !providerInfo.issuerId) {
+        throw new Error(providerInfo.error || 'Attestation provider identity is unavailable.');
+      }
       const skBytes = fromHex(adminSk.trim());
       const adminHash = (pureCircuits as any).admin_public_key(skBytes);
       const sessionId = fromHex(generateRandomHex());
       const brokerId = fromHex(generateRandomHex());
-      const deadline = BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60); // 7 days
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60);
       const threshold = BigInt(deployThreshold.replace(/[^0-9]/g, ''));
       const cap = BigInt(deployCap.replace(/[^0-9]/g, ''));
+      const providerKey = { x: BigInt(providerInfo.publicKey.x), y: BigInt(providerInfo.publicKey.y) };
 
-      const deployed = await deployContract(session.providers as any, {
-        privateStateId: 'silentsolvent-admin',
-        compiledContract: getCompiledContract({ admin_secret: (ctx: any) => [ctx.privateState, skBytes] }),
-        initialPrivateState: {},
-        args: [threshold, sessionId, deadline, brokerId, adminHash, cap],
-      });
-
-      const newAddress = deployed.deployTxData.public.contractAddress;
+      setDeployStatus('Building, proving, and submitting the deployment transaction...');
+      const deployTxData = await createUnprovenDeployTx(
+        { zkConfigProvider: session.providers.zkConfigProvider, walletProvider: session.providers.walletProvider } as any,
+        {
+          compiledContract: getCompiledContract({ admin_secret: () => [{}, skBytes] }),
+          initialPrivateState: {},
+          signingKey: sampleSigningKey(),
+          args: [threshold, sessionId, deadline, brokerId, adminHash, cap, fromHex(providerInfo.assetId), fromHex(providerInfo.issuerId), providerKey, 900n],
+        } as any,
+      );
+      const newAddress = deployTxData.public.contractAddress;
+      const submitted = await submitTxAsync(session.providers as any, { unprovenTx: deployTxData.private.unprovenTx } as any);
+      if (!submitted) throw new Error('Deployment wallet returned no transaction id.');
+      await waitForSuccessfulTransactionAndState(
+        session.providers.publicDataProvider,
+        submitted,
+        async () => {
+          const state = await session.providers.publicDataProvider.queryContractState(newAddress);
+          return state?.data ? ledger(state.data) : null;
+        },
+        (state) => Boolean(state?.is_active),
+      );
       setContractAddress(newAddress);
       setActiveContract(newAddress);
-
-      // Persist admin secret key paired with the newly deployed contract address
-      localStorage.setItem(STORAGE_ADMIN_SK, adminSk.trim());
-      localStorage.setItem(`${STORAGE_ADMIN_SK}_${newAddress}`, adminSk.trim());
-
-      setDeployStatus(`Deployed successfully at: ${newAddress}`);
-      setTimeout(refetch, 3000); // Wait for indexer
+      setDeployStatus(`Deployed and indexed successfully at: ${newAddress} (tx ${submitted})`);
+      await refetch();
     } catch (e: any) {
       setDeployStatus(`Deploy failed: ${e.message}`);
     } finally {
@@ -180,15 +160,26 @@ export default function AdminPage() {
     try {
       setDeployStatus(`${isCurrentlyActive ? 'Pausing' : 'Resuming'} session...`);
       const skBytes = fromHex(adminSk.trim());
-      await submitCallTx(session.providers as any, {
+      const submitted = await submitCallTx(session.providers as any, {
         compiledContract: getCompiledContract({ admin_secret: (ctx: any) => [ctx.privateState, skBytes] }),
         contractAddress: activeContract,
         circuitId: circuit,
         witnesses: { admin_secret: (ctx: any) => [ctx.privateState, skBytes] },
         args: [],
       } as any);
-      setDeployStatus(`Session ${isCurrentlyActive ? 'paused' : 'resumed'}.`);
-      setTimeout(refetch, 3000);
+      const txId = submitted?.public?.txHash || submitted?.txId;
+      if (!txId) throw new Error('Admin transaction returned no transaction id.');
+      await waitForSuccessfulTransactionAndState(
+        session.providers.publicDataProvider,
+        txId,
+        async () => {
+          const state = await session.providers.publicDataProvider.queryContractState(activeContract);
+          return state?.data ? ledger(state.data) : null;
+        },
+        (state) => Boolean(state && state.is_active !== isCurrentlyActive),
+      );
+      setDeployStatus(`Session ${isCurrentlyActive ? 'paused' : 'resumed'} and indexed.`);
+      await refetch();
     } catch (e: any) {
       setDeployStatus(`Failed: ${e.message}`);
     }
@@ -220,14 +211,11 @@ export default function AdminPage() {
             <div className="input-group">
               <div className="flex justify-between items-center mb-4">
                 <label className="input-label flex items-center gap-4">
-                  <KeyRound size={12} /> Admin Secret Key (Persistent)
+                  <KeyRound size={12} /> Admin Secret Key (memory only)
                 </label>
                 <div className="flex gap-8">
                   <button className="text-[11px] text-accent hover:underline flex items-center gap-2" onClick={handleCopyKey}>
                     <Copy size={11} /> {copiedKey ? 'Copied' : 'Copy'}
-                  </button>
-                  <button className="text-[11px] text-accent hover:underline flex items-center gap-2" onClick={handleExportKey}>
-                    <Download size={11} /> Backup
                   </button>
                   <button className="text-[11px] text-muted hover:text-white" onClick={handleGenerateNewKey}>
                     Regenerate
@@ -241,13 +229,13 @@ export default function AdminPage() {
                 onChange={(e) => handleUpdateAdminSk(e.target.value)}
               />
               <div className="text-[11px] text-muted mt-4">
-                ✓ Persisted securely in browser storage. Saved and linked to active contract address.
+                Held in memory only. This prototype never writes the admin secret to Web Storage, downloads, or deployment records.
               </div>
             </div>
 
             <div className="grid-2">
               <div className="input-group">
-                <label className="input-label">Threshold (Cents)</label>
+                <label className="input-label">Threshold (asset units)</label>
                 <input
                   type="text"
                   className="input mono"

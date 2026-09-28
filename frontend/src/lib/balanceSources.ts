@@ -1,19 +1,27 @@
-import { INDEXER_URL } from '../config';
+import { ATTESTATION_API_URL } from '../config';
 
-export type BalanceSourceType = 'native_midnight' | 'custodian_oracle' | 'custom_proof';
+export type BalanceSourceType = 'custodian_attestation';
 
-export interface CustodianAttestation {
-  id: string;
-  custodianName: string;
-  custodianId: string;
-  accountReference: string;
-  asset: string;
-  balanceCents: bigint;
-  timestamp: number;
+export interface SchnorrSignaturePayload {
+  announcement: { x: string; y: string };
+  response: string;
+}
+
+/**
+ * This is the only balance payload accepted by the proving flow.  The balance
+ * is intentionally a string because it is an exact asset-unit integer, not a
+ * JavaScript number.  The provider signature covers every field below.
+ */
+export interface BalanceAttestationPayload {
+  assetId: string;
+  issuerId: string;
+  sessionId: string;
+  firmCommitment: string;
+  balance: string;
+  issuedAt: number;
   expiresAt: number;
-  oracleSignature: string;
-  oraclePublicKey: string;
-  verified: boolean;
+  nonce: string;
+  signature: SchnorrSignaturePayload;
 }
 
 export interface AuthenticatedBalanceResult {
@@ -24,182 +32,81 @@ export interface AuthenticatedBalanceResult {
   isVerified: boolean;
   verificationDetails: string;
   timestamp: number;
-  metadata?: Record<string, any>;
+  attestation: BalanceAttestationPayload;
 }
 
-// Built-in institutional custodian PoR attestation fixtures with verifiable signatures
-export const INSTITUTIONAL_CUSTODIAN_FIXTURES: CustodianAttestation[] = [
-  {
-    id: 'fireblocks_prime',
-    custodianName: 'Fireblocks Institutional Prime',
-    custodianId: 'custodian:fireblocks:ny:v1',
-    accountReference: 'FB-VAULT-8839-INSTITUTIONAL',
-    asset: 'USD / USDC Liquid Reserves',
-    balanceCents: 15_000_000_00n, // $15,000,000.00
-    timestamp: 1774512000,
-    expiresAt: 1806048000,
-    oracleSignature: '0x3f8a91c8e7b4a2d109f3e4b7c8a1d0f2e3b4a5c6d7e8f901a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5',
-    oraclePublicKey: '0x028392a839f283910c2839485720193847562019283746501928374650192837',
-    verified: true,
-  },
-  {
-    id: 'coinbase_prime',
-    custodianName: 'Coinbase Prime Custody',
-    custodianId: 'custodian:coinbase:prime:us:v1',
-    accountReference: 'CB-PRIME-TREASURY-0041',
-    asset: 'USD Settlement Balance',
-    balanceCents: 25_000_000_00n, // $25,000,000.00
-    timestamp: 1774512000,
-    expiresAt: 1806048000,
-    oracleSignature: '0x71a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f901a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f901a2b3c4d5e6f7a8b9c0',
-    oraclePublicKey: '0x0374628391029384756102938475610293847561029384756102938475610293',
-    verified: true,
-  },
-  {
-    id: 'copper_clearloop',
-    custodianName: 'Copper ClearLoop Vault',
-    custodianId: 'custodian:copper:clearloop:uk:v1',
-    accountReference: 'COPPER-CL-9921-ESCROW',
-    asset: 'Multi-Asset Institutional Collateral',
-    balanceCents: 7_500_000_00n, // $7,500,000.00
-    timestamp: 1774512000,
-    expiresAt: 1806048000,
-    oracleSignature: '0x192837465019283746501928374650192837465019283746501928374650192837465019283746501928374650192837',
-    oraclePublicKey: '0x0219283746501928374650192837465019283746501928374650192837465019',
-    verified: true,
-  },
-];
+function isHex32(value: unknown): value is string {
+  return typeof value === 'string' && /^(?:0x)?[0-9a-fA-F]{64}$/.test(value);
+}
+
+function assertAttestationShape(value: any): asserts value is BalanceAttestationPayload {
+  if (!value || !isHex32(value.assetId) || !isHex32(value.issuerId) || !isHex32(value.sessionId) ||
+      !isHex32(value.firmCommitment) || !isHex32(value.nonce)) {
+    throw new Error('Attestation identifiers must all be exactly 32-byte hexadecimal values.');
+  }
+  if (!/^[0-9]+$/.test(String(value.balance)) || BigInt(value.balance) <= 0n) {
+    throw new Error('Attestation balance must be a positive integer asset amount.');
+  }
+  if (!Number.isSafeInteger(value.issuedAt) || !Number.isSafeInteger(value.expiresAt)) {
+    throw new Error('Attestation timestamps are invalid.');
+  }
+  if (value.expiresAt <= value.issuedAt) throw new Error('Attestation validity window is invalid.');
+  if (!value.signature || !value.signature.announcement ||
+      !/^[0-9]+$/.test(String(value.signature.announcement.x)) ||
+      !/^[0-9]+$/.test(String(value.signature.announcement.y)) ||
+      !/^[0-9]+$/.test(String(value.signature.response))) {
+    throw new Error('Attestation does not contain a valid Jubjub Schnorr signature.');
+  }
+}
 
 /**
- * Verifies the cryptographic signature and timestamp of a custodian attestation.
+ * Fetch a fresh attestation from the configured custodian gateway.  The
+ * gateway obtains the balance from its configured custodian source and signs
+ * the exact asset/session/firm/timestamp/nonce tuple.  The browser never
+ * accepts a balance, signature, or fallback supplied by the user.
  */
-export function verifyCustodianAttestation(attestation: CustodianAttestation): { isValid: boolean; reason?: string } {
-  if (!attestation.oracleSignature || attestation.oracleSignature.length < 32) {
-    return { isValid: false, reason: 'Missing or malformed cryptographic oracle signature.' };
+export async function fetchFreshCustodianAttestation(input: {
+  assetId: string;
+  issuerId: string;
+  sessionId: string;
+  firmCommitment: string;
+}): Promise<AuthenticatedBalanceResult> {
+  if (!ATTESTATION_API_URL) {
+    throw new Error('No attestation service is configured; a signed custodian snapshot is required.');
   }
+  for (const [name, value] of Object.entries(input)) {
+    if (!isHex32(value)) throw new Error(`${name} must be a 32-byte hexadecimal value.`);
+  }
+
+  const response = await fetch(`${ATTESTATION_API_URL}/attest`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `Attestation service returned HTTP ${response.status}.`);
+  assertAttestationShape(payload);
+
   const now = Math.floor(Date.now() / 1000);
-  if (attestation.expiresAt && attestation.expiresAt < now) {
-    return { isValid: false, reason: 'Custodian Proof-of-Reserve attestation has expired.' };
+  if (payload.assetId.toLowerCase() !== input.assetId.toLowerCase() ||
+      payload.issuerId.toLowerCase() !== input.issuerId.toLowerCase() ||
+      payload.sessionId.toLowerCase() !== input.sessionId.toLowerCase() ||
+      payload.firmCommitment.toLowerCase() !== input.firmCommitment.toLowerCase()) {
+    throw new Error('Attestation context does not match the active session, asset, issuer, or firm.');
   }
-  if (!attestation.balanceCents || attestation.balanceCents <= 0n) {
-    return { isValid: false, reason: 'Invalid non-positive balance in attestation.' };
-  }
-  return { isValid: true };
-}
+  if (payload.issuedAt > now + 5) throw new Error('Attestation was issued in the future.');
+  if (payload.expiresAt <= now) throw new Error('Attestation is already expired.');
 
-/**
- * Fetches an authenticated Midnight-native unshielded balance directly from the indexer.
- */
-export async function fetchMidnightNativeBalance(unshieldedAddress: string): Promise<AuthenticatedBalanceResult> {
-  if (!unshieldedAddress) {
-    throw new Error('No Midnight unshielded address provided');
-  }
-
-  try {
-    const query = `
-      query GetUnshieldedUtxos($address: HexEncoded!) {
-        contractAction(address: $address) {
-          unshieldedBalances {
-            tokenType
-            amount
-          }
-        }
-      }
-    `;
-
-    const res = await fetch(INDEXER_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query, variables: { address: unshieldedAddress } }),
-    });
-
-    let totalRaw = 0n;
-    if (res.ok) {
-      const data = await res.json();
-      const balances: Array<{ tokenType: string; amount: string }> =
-        data.data?.contractAction?.unshieldedBalances ?? [];
-      for (const b of balances) {
-        try {
-          totalRaw += BigInt(b.amount);
-        } catch {}
-      }
-    }
-
-    // Default reference liquidity valuation: 1 tNIGHT native token is pegged for institutional preprod simulation
-    // If native on-chain testnet balance is 0 or low, provide base testnet liquid balance
-    const baseCents = totalRaw > 0n ? totalRaw * 100n : 10_000_000_00n; // Default $10M baseline native proof
-
-    return {
-      sourceType: 'native_midnight',
-      sourceLabel: 'Midnight Network Native Holdings',
-      balanceCents: baseCents,
-      formattedBalance: `$${(Number(baseCents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-      isVerified: true,
-      verificationDetails: `Authenticated on-chain UTXO state via Preprod Indexer for address ${unshieldedAddress.slice(0, 14)}...`,
-      timestamp: Date.now(),
-      metadata: {
-        unshieldedAddress,
-        rawUtxoAmount: totalRaw.toString(),
-      },
-    };
-  } catch (err: any) {
-    console.warn('Native balance indexer query failed, using authenticated fallback:', err);
-    const fallbackCents = 10_000_000_00n;
-    return {
-      sourceType: 'native_midnight',
-      sourceLabel: 'Midnight Network Native Holdings',
-      balanceCents: fallbackCents,
-      formattedBalance: `$${(Number(fallbackCents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-      isVerified: true,
-      verificationDetails: `Authenticated via connected wallet ${unshieldedAddress.slice(0, 14)}...`,
-      timestamp: Date.now(),
-    };
-  }
-}
-
-/**
- * Parses and verifies an uploaded custom Custodian Proof-of-Reserve JSON file.
- */
-export function parseCustomPoRAttestation(jsonString: string): AuthenticatedBalanceResult {
-  try {
-    const parsed = JSON.parse(jsonString);
-    if (!parsed.balanceCents && !parsed.balanceUSD) {
-      throw new Error('Missing balance field (balanceCents or balanceUSD).');
-    }
-    const balanceCents = parsed.balanceCents
-      ? BigInt(parsed.balanceCents)
-      : BigInt(Math.floor(Number(parsed.balanceUSD) * 100));
-
-    const attestation: CustodianAttestation = {
-      id: parsed.id || 'custom_custodian',
-      custodianName: parsed.custodianName || 'Institutional Custodian Oracle',
-      custodianId: parsed.custodianId || 'custodian:custom:v1',
-      accountReference: parsed.accountReference || 'VAULT-CONFIDENTIAL',
-      asset: parsed.asset || 'USD Reserves',
-      balanceCents,
-      timestamp: parsed.timestamp || Math.floor(Date.now() / 1000),
-      expiresAt: parsed.expiresAt || Math.floor(Date.now() / 1000) + 86400 * 30,
-      oracleSignature: parsed.oracleSignature || '0x' + 'a'.repeat(64),
-      oraclePublicKey: parsed.oraclePublicKey || '0x' + 'b'.repeat(64),
-      verified: true,
-    };
-
-    const verification = verifyCustodianAttestation(attestation);
-    if (!verification.isValid) {
-      throw new Error(verification.reason || 'Invalid attestation signature or expired token.');
-    }
-
-    return {
-      sourceType: 'custodian_oracle',
-      sourceLabel: attestation.custodianName,
-      balanceCents: attestation.balanceCents,
-      formattedBalance: `$${(Number(attestation.balanceCents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-      isVerified: true,
-      verificationDetails: `Signed by ${attestation.custodianName} [ID: ${attestation.custodianId}] • Sig: ${attestation.oracleSignature.slice(0, 16)}...`,
-      timestamp: attestation.timestamp * 1000,
-      metadata: { ...attestation },
-    };
-  } catch (e: any) {
-    throw new Error(`Failed to parse Proof-of-Reserve attestation: ${e.message}`);
-  }
+  const balance = BigInt(payload.balance);
+  return {
+    sourceType: 'custodian_attestation',
+    sourceLabel: `Custodian issuer ${payload.issuerId.slice(0, 14)}…`,
+    balanceCents: balance,
+    formattedBalance: `${balance.toString()} asset units`,
+    isVerified: true,
+    verificationDetails: 'Fresh Jubjub Schnorr attestation; signature and context are verified in the Compact circuit.',
+    timestamp: payload.issuedAt * 1000,
+    attestation: payload,
+  };
 }
