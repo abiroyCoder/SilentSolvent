@@ -2,46 +2,53 @@ name: SilentSolvent CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: silentsolvent-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  COMPACTC_VERSION: 0.31.1
+  NODE_VERSION: 22.19.0
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Compact compiler
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install pinned Compact compiler
+        shell: bash
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          $HOME/.local/bin/compact update
-
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Compile Compact Contract
-        run: |
-          cp contracts/managed/silentsolvent/contract/index.js /tmp/index.js.bak
-          compact compile contracts/silentsolvent.compact contracts/managed/silentsolvent
-          cp /tmp/index.js.bak contracts/managed/silentsolvent/contract/index.js
-          node scripts/patch-runtime.cjs
-
-      - name: Run Contract Test Suite
-        run: npm test
-
-      - name: Copy Assets for Frontend
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          compact update "$COMPACTC_VERSION"
+          test "$(compact compile --version)" = "$COMPACTC_VERSION"
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Compile Compact contract
+        run: npm run compile
+      - name: Synchronize generated artifacts
         run: npm run copy:managed
-
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: |
-          npm install
-          npm run build
+      - name: Check compiler metadata and artifact drift
+        run: node scripts/check-artifact-drift.mjs
+      - name: Type-check Node packages
+        run: npx tsc --noEmit
+      - name: Run contract tests
+        run: npm test
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_ATTESTATION_API_URL: https://attestation.invalid.example

@@ -1,54 +1,65 @@
-name: SilentSolvent Deployment & Verification
+name: SilentSolvent Preprod Deployment
 
 on:
   workflow_dispatch:
     inputs:
-      target_network:
-        description: 'Target Network for Contract Deployment'
+      confirmation:
+        description: 'Type DEPLOY_PREPROD to authorize a real deployment'
         required: true
-        default: 'preprod'
-        type: choice
-        options:
-          - preprod
-          - preview
-          - local
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  COMPACTC_VERSION: 0.31.1
+  NODE_VERSION: 22.19.0
 
 jobs:
-  deploy-and-verify:
-    runs-on: ubuntu-latest
+  deploy-preprod:
+    if: github.event.inputs.confirmation == 'DEPLOY_PREPROD'
+    environment: preprod
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Compact compiler
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install pinned Compact compiler
+        shell: bash
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          $HOME/.local/bin/compact update
-
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Verify Contract Compilation
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          compact update "$COMPACTC_VERSION"
+          test "$(compact compile --version)" = "$COMPACTC_VERSION"
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Compile and validate generated artifacts
         run: |
-          cp contracts/managed/silentsolvent/contract/index.js /tmp/index.js.bak
-          compact compile contracts/silentsolvent.compact contracts/managed/silentsolvent
-          cp /tmp/index.js.bak contracts/managed/silentsolvent/contract/index.js
-          node scripts/patch-runtime.cjs
-
-      - name: Run Full Test Suite (Circuits + E2E)
+          npm run compile
+          npm run copy:managed
+          node scripts/check-artifact-drift.mjs
+          npx tsc --noEmit
+      - name: Run contract tests
         run: npm test
-
-      - name: Prepare Deployment Artifacts
-        run: npx ts-node --esm scripts/deploy-preprod.ts
-
-      - name: Build Production Frontend
-        working-directory: ./frontend
-        run: |
-          npm install
-          npm run build
+      - name: Deploy through the real Preprod wallet
+        env:
+          MIDNIGHT_PREPROD_MNEMONIC: ${{ secrets.MIDNIGHT_PREPROD_MNEMONIC }}
+          MIDNIGHT_PROOF_SERVER: ${{ secrets.MIDNIGHT_PROOF_SERVER }}
+          ATTESTATION_API_URL: ${{ secrets.ATTESTATION_API_URL }}
+          SILENTSOLVENT_ADMIN_SECRET_HEX: ${{ secrets.SILENTSOLVENT_ADMIN_SECRET_HEX }}
+          SILENTSOLVENT_THRESHOLD: ${{ vars.SILENTSOLVENT_THRESHOLD }}
+          SILENTSOLVENT_ATTESTATION_CAP: ${{ vars.SILENTSOLVENT_ATTESTATION_CAP }}
+        run: node --experimental-strip-types scripts/deploy-preprod.ts > deployment-record.json
+      - name: Verify deployment through the Preprod indexer
+        run: node scripts/verify-deployment.mjs deployment-record.json
+      - name: Upload redacted deployment record
+        uses: actions/upload-artifact@v4
+        with:
+          name: silentsolvent-preprod-deployment
+          path: deployment-record.json
+          if-no-files-found: error
