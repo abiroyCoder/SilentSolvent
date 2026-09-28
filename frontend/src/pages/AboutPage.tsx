@@ -6,7 +6,7 @@ export default function AboutPage() {
       <div className="mb-32">
         <div className="card-title mb-12 text-[18px] text-text-0">Privacy Architecture</div>
         <p className="text-secondary text-[13px] leading-relaxed max-w-[700px]">
-          Midnight zero-knowledge model separating client witness data from public consensus commitments.
+          Midnight zero-knowledge model separating private proof inputs from public consensus commitments. SilentSolvent is a prototype and does not by itself establish production-grade solvency.
         </p>
       </div>
 
@@ -31,10 +31,10 @@ export default function AboutPage() {
           </div>
           <div className="mt-16 text-muted text-[13px] leading-relaxed">
             <ul className="pl-16 list-disc space-y-2 mt-8 text-text-0">
-              <li>Liquid account balance</li>
+              <li>Signed custodian balance snapshot</li>
               <li>Firm identity seed</li>
-              <li>Custodian wallet addresses</li>
-              <li>Portfolio composition</li>
+              <li>Attestation signature and nonce</li>
+              <li>Portfolio/account details held by the custodian</li>
             </ul>
           </div>
         </div>
@@ -48,13 +48,13 @@ export default function AboutPage() {
           <div>
             <div className="font-semibold text-[14px] flex items-center gap-8 mb-8 text-text-0"><EyeOff size={14} /> Zero Data Leakage</div>
             <p className="text-secondary text-[13px] leading-relaxed">
-              Balance accessed strictly via `witness get_liquid_balance()`. Evaluation occurs entirely inside the client ZK circuit without on-chain argument disclosure.
+              A fresh asset/session/firm-bound custodian attestation is supplied as a private witness. The Compact circuit verifies its Jubjub Schnorr signature and freshness before evaluating the threshold.
             </p>
           </div>
           <div>
             <div className="font-semibold text-[14px] flex items-center gap-8 mb-8 text-text-0"><Shield size={14} /> Sybil Resistance</div>
             <p className="text-secondary text-[13px] leading-relaxed">
-              Emits deterministic session nullifier `make_nullifier(firm_secret, session_id)` preventing duplicate attestations from the same firm.
+              Emits a session-scoped nullifier `make_nullifier(firm_secret, session_id)` preventing duplicate attestations from the same in-memory firm credential.
             </p>
           </div>
         </div>

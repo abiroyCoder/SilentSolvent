@@ -1,5 +1,7 @@
 # SilentSolvent: Product Proposal & Architecture Specification
 
+> **Prototype status:** SilentSolvent is currently a private threshold-attestation prototype, not a production-grade proof-of-solvency system. The historical Preprod contract predates the current in-circuit custodian-attestation design. Production use requires an independently operated custodian gateway, audited key management, completed wallet-to-Preprod E2E tests, and security review.
+
 > **Hackathon Submission Level 3 Deliverable**  
 > **Project**: SilentSolvent — Zero-Knowledge OTC Pre-Trade Liquidity Attestation  
 > **Target Network**: Midnight Network (Preprod Deployed & Mainnet Roadmap)  

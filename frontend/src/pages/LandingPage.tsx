@@ -13,6 +13,10 @@ export default function LandingPage() {
       <CrtOverlay />
 
       <div className="page page-wide relative z-10">
+        <div className="notice notice-warning mb-24 text-[12px]">
+          Prototype only: this dApp demonstrates private threshold attestations. It is not a production proof-of-solvency service. A real proof requires a configured custodian gateway and a fresh signature verified by the Compact circuit.
+        </div>
+
         {/* 1. XERO PHOTON BEAM HERO SECTION */}
         <PhotonBeamHero />
 

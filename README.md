@@ -14,8 +14,11 @@ A zero-knowledge pre-trade liquidity attestation dApp on [Midnight Network](http
 
 </div>
 
+> [!WARNING]
+> **Prototype status:** SilentSolvent is currently a private threshold-attestation prototype, not a production-grade proof-of-solvency system. The current circuit requires a configured custodian service and verifies its fresh asset-specific Schnorr attestation in-circuit. The historical Preprod deployment below uses the previous witness-only circuit and must not be treated as evidence for the current design. Do not use this repository for financial, custody, or solvency decisions.
+>
 > [!IMPORTANT]
-> ### 🌐 Level 2 & Level 3 Mandatory Deliverables & Verification Links
+> ### Historical Deployment and Verification Links
 > * **⚡ Contract Address (Preprod)**: **`79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`** ([1AM Explorer](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod))
 > * **⚡ Hex Representation**: `0x79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268` (Network: **Midnight Preprod**)
 > * **🚀 Live Demo dApp URL (Netlify)**: **[https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)**
@@ -45,7 +48,7 @@ A zero-knowledge pre-trade liquidity attestation dApp on [Midnight Network](http
 
 ## Contract Address (Preprod)
 
-SilentSolvent is compiled with Compact and deployed live on the **Midnight Preprod Testnet**:
+A previous SilentSolvent contract was deployed on the **Midnight Preprod Testnet**. That deployment is retained as historical evidence only; it predates in-circuit custodian-attestation verification and is not the current solvency design:
 
 * **Contract Address (Preprod)**: `79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`
 * **Contract Address (Preprod Hex)**: `0x79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268`
@@ -53,7 +56,7 @@ SilentSolvent is compiled with Compact and deployed live on the **Midnight Prepr
 * **Deployment Transaction**: [`efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800`](https://explorer.1am.xyz/tx/efe5cfb2c7ae11a4fb63917eba5c1e39134956229e79d4b39f70ff6d9d108800?network=preprod)
 * **1AM Block Explorer URL**: [https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod](https://explorer.1am.xyz/contract/79f20921e5ca2377260b4912892cb690f20afa14ccc86667e697724d6eb13268?network=preprod)
 * **Live Demo dApp (Level 2 Deliverable)**: [https://silentsolvent.netlify.app](https://silentsolvent.netlify.app/)
-* **On-Chain State Status**: `Active` (Synchronized via Preprod Indexer GraphQL API v4)
+* **Historical status**: `Active` (Synchronized via the Preprod Indexer GraphQL API v4; not a verification of the current contract source)
 
 #### Preprod Contract Explorer & Live Sync Telemetry
 Below is the live on-chain explorer telemetry confirming contract registration, active status, threshold parameter, and indexing synchronization on Midnight Preprod:
@@ -100,11 +103,11 @@ The broker deploys a session with a minimum threshold on the Midnight Network. T
 | **Project Proposal (Level 3 Deliverable)** | Architecture & Scope Review | **[`PROPOSAL.md`](PROPOSAL.md)** (Answers all 4 questions) |
 | **Compact Smart Contract** | Review logic and circuits | [`contracts/silentsolvent.compact`](contracts/silentsolvent.compact) |
 | **Circuits and Keys** | Inspect generated artifacts | [`contracts/managed/silentsolvent/`](contracts/managed/silentsolvent/) |
-| **Automated Test Suite** | Execute `npm run test` | Passing 11-test suite (6 circuits + 5-stage Frontend E2E) |
+| **Automated Test Suite** | Execute `npm test` | Local authenticated-attestation circuit tests; genuine Preprod E2E is opt-in and requires funded wallet/service secrets |
 | **CI/CD Pipeline** | GitHub Actions | [CI Workflow](.github/workflows/ci.yaml) & [CD Deploy Workflow](.github/workflows/deploy.yaml) |
 | **Wallet Integration** | Launch UI | Official DApp Connector API (`@midnight-ntwrk/dapp-connector-api`) |
-| **Authenticated Balance Source** | Review UI & witness source | Midnight Native Indexer Proof + Institutional PoR Oracle |
-| **Persistent Firm Credential** | Review identity system | Persistent cryptographic commitment + One-attestation Sybil protection |
+| **Authenticated Balance Source** | Review UI & witness source | Configured custodian gateway returns a fresh asset/session/firm-bound Schnorr attestation; no fixture or fallback |
+| **Firm Credential** | Review identity system | Process-memory commitment only; secrets are intentionally not persisted by this prototype |
 | **Privacy Model Documentation** | Review specification | [Privacy Model Section](#privacy-model-what-an-observer-learns) |
 | **Video Demonstration** | Watch walkthrough | [Google Drive Demo Video](https://drive.google.com/file/d/15s4wkaOlXco3ur7x6DqAvf2jk8FsmTNR/view?usp=sharing) |
 | **Public Announcement** | Verified post on X | [Launch Post on X](https://x.com/silentsolvent) |
@@ -173,16 +176,14 @@ Zero-knowledge proofs are generated locally by the fund. An observer or broker *
 ### Level 3: First Quarter - Production-Grade dApp & Pipeline Hardening
 * **Selected Problem Statement**: Prove liquidity for OTC block trades without exposing custody wallets or total capital.
 * **Formal Project Proposal ([`PROPOSAL.md`](PROPOSAL.md))**: Delivered comprehensive proposal addressing all 4 hackathon questions (Problem & Users, Public vs Private Data Model, Why Midnight Specifically, and Mainnet Scope Feasibility by Level 6).
-* **Authenticated Balance Source**: Replaced manual text input with a verified balance provider:
-  - **Midnight-Native On-Chain Balance**: Direct indexer-authenticated UTXO balance query for the connected wallet.
-  - **Institutional Proof-of-Reserve (PoR) Oracle**: Cryptographically signed custodian attestations (Fireblocks Prime, Coinbase Prime, Copper ClearLoop) with digital signature validation and expiration checks.
+* **Authenticated Balance Source (prototype)**: The current flow accepts no manual balance, fixture, or fallback. A separately configured custodian gateway must return a fresh asset/session/firm-bound Jubjub Schnorr attestation; the Compact circuit verifies that signature, context, and freshness before comparing the balance with the threshold.
 * **Production Integrity & Strict Submission**: Removed fake transaction fallback. Transactions strictly require real wallet connection, proving, and on-chain submission.
 * **Persistent Cryptographic Firm Credentials**: Institutional identity seeds are stored in persistent client storage with public commitment derivation (`persistentHash`) and identity management.
 * **Genuine One-Attestation-Per-Credential Semantics**: Frontend evaluates session nullifiers against on-chain ledger state (`nullifiers` and `attestation_log`), preventing duplicate attestations while guarding against Sybil attacks.
-* **Persistent Private State & Admin Key Storage**: Private state provider and admin credentials persist across page reloads via local storage synchronization, featuring on-chain admin authorization verification.
+* **Secret handling**: Firm and admin secrets are process-memory only in the prototype. They are not written to localStorage, downloads, deployment records, or the repository.
 * **Real Indexed Explorer**: Explorer displays actual on-chain nullifier records and real indexer transaction telemetry instead of synthetic array iterations.
-* **Full Automated Test Suite (11 Tests)**: 6 smart contract circuit tests + 5-stage Frontend E2E pipeline (`wallet → witness → proof → transaction → Preprod confirmation → indexer state change`).
-* **Deployment Evidence & CD Workflow**: Documented full on-chain deployment evidence ([`contracts/deployment-evidence.json`](contracts/deployment-evidence.json)) and automated deployment workflow ([`.github/workflows/deploy.yaml`](.github/workflows/deploy.yaml)).
+* **Tests**: Local tests exercise Compact runtime signature verification. The genuine wallet → proof → Preprod indexer E2E is opt-in (`npm run e2e:preprod`) and requires explicitly supplied operator/custodian configuration.
+* **Deployment**: The CLI and gated workflow now perform a real deployment only when the operator supplies secrets. `contracts/deployment-evidence.json` remains historical evidence for the superseded contract.
 
 ### Level 4: Waxing Gibbous - MVP and Contract Logic
 * **Production Contract Circuits**:
