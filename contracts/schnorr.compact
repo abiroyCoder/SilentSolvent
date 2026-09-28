@@ -1,0 +1,79 @@
+// Jubjub Schnorr verification module.
+//
+// The provider signs the complete, domain-separated attestation message off-chain.
+// The circuit verifies the signature before it can use the balance.  The reduction
+// witness only supplies the quotient/remainder needed to fit Compact's transient
+// hash into Jubjub's scalar field; it does not choose an unconstrained challenge.
+module schnorr {
+  import CompactStandardLibrary;
+
+  export struct SchnorrSignature {
+    announcement: JubjubPoint;
+    response: Field;
+  }
+
+  struct SchnorrHashInput<#n> {
+    ann_x: Field;
+    ann_y: Field;
+    pk_x: Field;
+    pk_y: Field;
+    msg: Vector<n, Field>;
+  }
+
+  witness getSchnorrReduction(challengeHash: Field): [Uint<7>, Uint<248>];
+
+  export circuit schnorrVerify<#n>(
+    msg: Vector<n, Field>,
+    signature: SchnorrSignature,
+    pk: JubjubPoint
+  ): [] {
+    const { announcement, response } = signature;
+    const cFull: Field = transientHash<SchnorrHashInput<n>>(
+      SchnorrHashInput<n> {
+        ann_x: jubjubPointX(announcement),
+        ann_y: jubjubPointY(announcement),
+        pk_x: jubjubPointX(pk),
+        pk_y: jubjubPointY(pk),
+        msg: msg
+      }
+    );
+
+    // 2^248.  The quotient is bounded so the equality below is an integer
+    // decomposition, not an equality that can be satisfied modulo the field.
+    const TWO_248: Field =
+      452312848583266388373324160190187140051835877600158453279131187530910662656 as Field;
+    const [q, remainder] = getSchnorrReduction(cFull);
+    assert(disclose(q) < 116, "Schnorr quotient out of range");
+    assert(
+      disclose(q) * TWO_248 + (disclose(remainder) as Field) == cFull,
+      "Invalid challenge reduction"
+    );
+
+    const challenge: Field = disclose(remainder) as Field;
+    const lhs: JubjubPoint = ecMulGenerator(response);
+    const rhs: JubjubPoint = ecAdd(announcement, ecMul(pk, challenge));
+    assert(
+      jubjubPointX(lhs) == jubjubPointX(rhs) &&
+        jubjubPointY(lhs) == jubjubPointY(rhs),
+      "Invalid attestation signature"
+    );
+  }
+
+  export pure circuit schnorrChallenge8(
+    ann_x: Field,
+    ann_y: Field,
+    pk_x: Field,
+    pk_y: Field,
+    msg: Vector<8, Field>
+  ): Field {
+    return transientHash<SchnorrHashInput<8>>(
+      SchnorrHashInput<8> {
+        ann_x: ann_x,
+        ann_y: ann_y,
+        pk_x: pk_x,
+        pk_y: pk_y,
+        msg: msg
+      }
+    );
+  }
+}

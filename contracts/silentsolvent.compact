@@ -1,6 +1,23 @@
-pragma language_version >=0.22.0;
+pragma language_version >= 0.22 && <= 0.23;
 
 import CompactStandardLibrary;
+import "schnorr" prefix Schnorr_;
+
+// SilentSolvent v2: the balance is usable only as part of a fresh, signed,
+// asset- and session-bound custodian attestation.  The signature is verified
+// inside the proof circuit; a prover cannot replace it with a client value.
+
+export struct BalanceAttestation {
+    asset_id: Bytes<32>;
+    issuer_id: Bytes<32>;
+    session_id: Bytes<32>;
+    firm_commitment: Bytes<32>;
+    balance: Uint<64>;
+    issued_at: Uint<64>;
+    expires_at: Uint<64>;
+    nonce: Bytes<32>;
+    signature: Schnorr_SchnorrSignature;
+}
 
 // ═══════════════════════════════════════════════════
 // PUBLIC LEDGER STATE — visible to all chain observers
@@ -12,17 +29,21 @@ export ledger session_deadline: Uint<64>;
 export ledger broker_id: Bytes<32>;
 export ledger admin: Bytes<32>;
 export ledger is_active: Boolean;
-export ledger total_attestations: Counter;
+export ledger total_attestations: Uint<64>;
 export ledger max_attestations: Uint<32>;
 export ledger nullifiers: Set<Bytes<32>>;
 export ledger attestation_log: Map<Bytes<32>, Bytes<32>>;
+export ledger asset_id: Bytes<32>;
+export ledger attestation_issuer_id: Bytes<32>;
+export ledger attestation_provider_key: JubjubPoint;
+export ledger max_attestation_age: Uint<64>;
 export sealed ledger contract_version: Bytes<32>;
 
 // ═══════════════════════════════════════════════════
-// PRIVATE WITNESSES — never leave the client browser
+// PRIVATE WITNESSES — supplied by the attestation service and kept private
 // ═══════════════════════════════════════════════════
 
-witness get_liquid_balance(): Uint<64>;
+witness get_balance_attestation(): BalanceAttestation;
 witness get_firm_secret(): Bytes<32>;
 witness admin_secret(): Bytes<32>;
 
@@ -36,8 +57,15 @@ constructor(
     deadline: Uint<64>,
     broker: Bytes<32>,
     admin_hash: Bytes<32>,
-    cap: Uint<32>
+    cap: Uint<32>,
+    asset: Bytes<32>,
+    issuer: Bytes<32>,
+    provider_key: JubjubPoint,
+    attestation_age: Uint<64>
 ) {
+    assert(threshold > 0, "Threshold must be positive");
+    assert(cap > 0, "Attestation cap must be positive");
+    assert(attestation_age > 0, "Attestation age must be positive");
     min_solvency_threshold = disclose(threshold);
     trade_session_id = disclose(session);
     session_deadline = disclose(deadline);
@@ -45,11 +73,15 @@ constructor(
     admin = disclose(admin_hash);
     is_active = disclose(true);
     max_attestations = disclose(cap);
-    contract_version = disclose(pad(32, "SilentSolvent:v1.0"));
+    asset_id = disclose(asset);
+    attestation_issuer_id = disclose(issuer);
+    attestation_provider_key = disclose(provider_key);
+    max_attestation_age = disclose(attestation_age);
+    contract_version = disclose(pad(32, "SilentSolvent:v2.0"));
 }
 
 // ═══════════════════════════════════════════════════
-// CORE CIRCUIT — Zero-Knowledge Solvency Attestation
+// AUTHENTICATED SOLVENCY ATTESTATION
 // ═══════════════════════════════════════════════════
 
 export circuit verify_solvency(): [] {
@@ -57,16 +89,49 @@ export circuit verify_solvency(): [] {
     assert(blockTimeLt(disclose(session_deadline)), "Trade session has expired");
     assert(disclose(total_attestations) < disclose(max_attestations), "Attestation cap reached");
 
-    const balance = get_liquid_balance();
-    assert(balance >= min_solvency_threshold, "Insufficient liquidity for trade execution");
+    const attestation = get_balance_attestation();
+    const firm_secret = get_firm_secret();
+    const expected_firm_commitment = derive_firm_commitment(firm_secret);
 
-    const firm_key = get_firm_secret();
-    const nul = make_nullifier(firm_key, trade_session_id);
+    // Every public context value is checked inside the circuit.  In particular,
+    // a valid signature for another asset, session, firm, or issuer is useless.
+    assert(attestation.asset_id == asset_id, "Attestation asset mismatch");
+    assert(attestation.issuer_id == attestation_issuer_id, "Attestation issuer mismatch");
+    assert(attestation.session_id == trade_session_id, "Attestation session mismatch");
+    assert(attestation.firm_commitment == expected_firm_commitment, "Attestation firm mismatch");
+
+    // Freshness is enforced against chain time.  The signed validity window is
+    // bounded as well, so a provider cannot issue a long-lived stale snapshot.
+    assert(blockTimeGte(disclose(attestation.issued_at)), "Attestation was issued in the future");
+    assert(blockTimeLt(disclose(attestation.expires_at)), "Attestation has expired");
+    assert(attestation.expires_at > attestation.issued_at, "Invalid attestation validity window");
+    assert(
+        attestation.expires_at - attestation.issued_at <= max_attestation_age,
+        "Attestation validity window is too long"
+    );
+
+    const message = attestation_message(
+        attestation.asset_id,
+        attestation.issuer_id,
+        attestation.session_id,
+        attestation.firm_commitment,
+        attestation.balance,
+        attestation.issued_at,
+        attestation.expires_at,
+        attestation.nonce
+    );
+
+    // This is the security boundary: the provider's Jubjub Schnorr signature
+    // is checked in the Compact circuit before the balance is compared.
+    Schnorr_schnorrVerify<8>(message, attestation.signature, attestation_provider_key);
+    assert(attestation.balance >= min_solvency_threshold, "Insufficient liquidity for trade execution");
+
+    const nul = make_nullifier(firm_secret, trade_session_id);
     assert(!nullifiers.member(disclose(nul)), "Firm already attested in this session");
 
     nullifiers.insert(disclose(nul));
     attestation_log.insert(disclose(nul), disclose(trade_session_id));
-    total_attestations.increment(1);
+    total_attestations = disclose((total_attestations + 1) as Uint<64>);
 }
 
 // ═══════════════════════════════════════════════════
@@ -82,11 +147,14 @@ export circuit update_session(
 ): [] {
     const sk = admin_secret();
     assert(admin == admin_public_key(sk), "Not authorized");
+    assert(new_threshold > 0, "Threshold must be positive");
+    assert(new_cap > 0, "Attestation cap must be positive");
     min_solvency_threshold = disclose(new_threshold);
     trade_session_id = disclose(new_session);
     session_deadline = disclose(new_deadline);
     broker_id = disclose(new_broker);
     max_attestations = disclose(new_cap);
+    total_attestations = disclose(0);
     is_active = disclose(true);
 }
 
@@ -106,6 +174,10 @@ export circuit resume_session(): [] {
 // PURE CIRCUITS — deterministic utility functions
 // ═══════════════════════════════════════════════════
 
+export pure circuit derive_firm_commitment(sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "ssolv:firm:v1"), sk]);
+}
+
 export pure circuit admin_public_key(sk: Bytes<32>): Bytes<32> {
     return persistentHash<Vector<2, Bytes<32>>>([pad(32, "ssolv:admin:v1"), sk]);
 }
@@ -116,4 +188,36 @@ export pure circuit make_nullifier(firm_secret: Bytes<32>, session: Bytes<32>): 
         firm_secret,
         session
     ]);
+}
+
+export pure circuit attestation_message(
+    asset: Bytes<32>,
+    issuer: Bytes<32>,
+    session: Bytes<32>,
+    firm: Bytes<32>,
+    balance: Uint<64>,
+    issued: Uint<64>,
+    expires: Uint<64>,
+    nonce: Bytes<32>
+): Vector<8, Field> {
+    return [
+        transientHash<Bytes<32>>(asset),
+        transientHash<Bytes<32>>(issuer),
+        transientHash<Bytes<32>>(session),
+        transientHash<Bytes<32>>(firm),
+        balance as Field,
+        issued as Field,
+        expires as Field,
+        transientHash<Bytes<32>>(nonce)
+    ];
+}
+
+export pure circuit attestation_challenge(
+    ann_x: Field,
+    ann_y: Field,
+    pk_x: Field,
+    pk_y: Field,
+    message: Vector<8, Field>
+): Field {
+    return Schnorr_schnorrChallenge8(ann_x, ann_y, pk_x, pk_y, message);
 }
